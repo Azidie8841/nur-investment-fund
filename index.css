@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Small helper to ensure the page background matches the component's classes */
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+}
