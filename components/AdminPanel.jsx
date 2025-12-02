@@ -30,6 +30,14 @@ export default function AdminPanel({
   const [cOwnership, setCOwnership] = useState('');
   const [cCountry, setCCountry] = useState('');
 
+  // edit mode state
+  const [editingCompany, setEditingCompany] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editValue, setEditValue] = useState('');
+  const [editSector, setEditSector] = useState('');
+  const [editOwnership, setEditOwnership] = useState('');
+  const [editCountry, setEditCountry] = useState('');
+
   // simple helpers
   const addHolding = (e) => {
     e.preventDefault();
@@ -64,6 +72,34 @@ export default function AdminPanel({
     // confirm deletion
     if (!window.confirm(`Delete company "${company.name}"? This action cannot be undone.`)) return;
     setEquitiesCompanies((prev) => prev.filter((c) => c !== company));
+  };
+
+  const startEdit = (company) => {
+    setEditingCompany(company);
+    setEditName(company.name);
+    setEditValue(company.value);
+    setEditSector(company.sector);
+    setEditOwnership(company.ownership);
+    setEditCountry(company.country);
+  };
+
+  const saveEdit = () => {
+    if (!editName || editValue === '') {
+      alert('Name and Value are required');
+      return;
+    }
+    setEquitiesCompanies((prev) =>
+      prev.map((c) =>
+        c === editingCompany
+          ? { name: editName, value: Number(editValue), sector: editSector, ownership: editOwnership, country: editCountry }
+          : c
+      )
+    );
+    setEditingCompany(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingCompany(null);
   };
 
   return (
@@ -132,19 +168,42 @@ export default function AdminPanel({
 
         <div className="bg-white rounded-lg shadow p-4">
           <h4 className="font-semibold mb-2">Recent Companies</h4>
-          <ul className="space-y-2 text-sm">
-            {equitiesCompanies.slice(0,6).map((c, i) => (
-              <li key={i} className="border p-2 rounded flex items-center justify-between">
-                <span>{c.name} — {c.sector} — {c.country}</span>
-                <button
-                  className="ml-3 px-2 py-1 bg-red-500 text-white rounded text-sm"
-                  onClick={() => deleteCompany(c)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
+          {editingCompany ? (
+            <div className="border p-4 rounded space-y-2">
+              <h5 className="font-medium">Edit Company</h5>
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editName} onChange={(e)=>setEditName(e.target.value)} />
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editValue} onChange={(e)=>setEditValue(e.target.value)} />
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Sector" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Ownership" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
+              <div className="flex gap-2">
+                <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveEdit}>Save</button>
+                <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={cancelEdit}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {equitiesCompanies.slice(0,6).map((c, i) => (
+                <li key={i} className="border p-2 rounded flex items-center justify-between">
+                  <span>{c.name} — {c.sector} — {c.country}</span>
+                  <div className="flex gap-1">
+                    <button
+                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                      onClick={() => startEdit(c)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                      onClick={() => deleteCompany(c)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
