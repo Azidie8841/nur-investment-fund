@@ -5,20 +5,27 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.cjs",
+    "server:dev": "node server/index.cjs",
+    "start": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
     "lucide-react": "*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "*"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "*",
     "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
-    "vite": "^5.0.0",
-    "@tailwindcss/postcss": "*"
+    "vite": "^5.0.0"
   }
 }

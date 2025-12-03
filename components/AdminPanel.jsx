@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, updateAssetMonthlyData } from '../utils/api';
 
 export default function AdminPanel({
-  holdings,
-  setHoldings,
-  assetAllocation,
-  setAssetAllocation,
   equitiesCompanies,
   setEquitiesCompanies,
-  performanceData,
-  setPerformanceData,
-  marketSegments,
-  setMarketSegments,
+  assetMonthlyData,
+  setAssetMonthlyData,
 }) {
   // holdings form state
   const [hName, setHName] = useState('');
@@ -39,39 +34,32 @@ export default function AdminPanel({
   const [editCountry, setEditCountry] = useState('');
 
   // simple helpers
-  const addHolding = (e) => {
-    e.preventDefault();
-    if (!hName || !hValue) return;
-    const newHolding = {
-      name: hName,
-      type: hType,
-      value: Number(hValue),
-      allocation: hAllocation || '0%'
-    };
-    setHoldings((prev) => [newHolding, ...prev]);
-    setHName(''); setHValue(''); setHAllocation(''); setHType('Equity');
-  };
-
-  const addAllocation = (e) => {
-    e.preventDefault();
-    if (!aName || !aValue) return;
-    const newAlloc = { name: aName, value: Number(aValue), color: aColor };
-    setAssetAllocation((prev) => [newAlloc, ...prev]);
-    setAName(''); setAValue(''); setAColor('#3b82f6');
-  };
-
-  const addCompany = (e) => {
+  const addCompany = async (e) => {
     e.preventDefault();
     if (!cName || !cValue) return;
-    const newCompany = { name: cName, value: Number(cValue), sector: cSector, ownership: cOwnership, country: cCountry };
-    setEquitiesCompanies((prev) => [newCompany, ...prev]);
-    setCName(''); setCValue(''); setCSector(''); setCOwnership(''); setCCountry('');
+    try {
+      const newCompany = await addEquitiesCompany({ 
+        name: cName, 
+        value: Number(cValue), 
+        sector: cSector, 
+        ownership: cOwnership, 
+        country: cCountry 
+      });
+      setEquitiesCompanies((prev) => [newCompany, ...prev]);
+      setCName(''); setCValue(''); setCSector(''); setCOwnership(''); setCCountry('');
+    } catch (error) {
+      alert('Failed to add company: ' + error.message);
+    }
   };
 
-  const deleteCompany = (company) => {
-    // confirm deletion
+  const deleteCompany = async (company) => {
     if (!window.confirm(`Delete company "${company.name}"? This action cannot be undone.`)) return;
-    setEquitiesCompanies((prev) => prev.filter((c) => c !== company));
+    try {
+      await deleteEquitiesCompany(company.id);
+      setEquitiesCompanies((prev) => prev.filter((c) => c.id !== company.id));
+    } catch (error) {
+      alert('Failed to delete company: ' + error.message);
+    }
   };
 
   const startEdit = (company) => {
@@ -83,143 +71,173 @@ export default function AdminPanel({
     setEditCountry(company.country);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editName || editValue === '') {
       alert('Name and Value are required');
       return;
     }
-    setEquitiesCompanies((prev) =>
-      prev.map((c) =>
-        c === editingCompany
-          ? { name: editName, value: Number(editValue), sector: editSector, ownership: editOwnership, country: editCountry }
-          : c
-      )
-    );
-    setEditingCompany(null);
+    try {
+      const updated = await updateEquitiesCompany(editingCompany.id, {
+        name: editName,
+        value: Number(editValue),
+        sector: editSector,
+        ownership: editOwnership,
+        country: editCountry
+      });
+      setEquitiesCompanies((prev) =>
+        prev.map((c) =>
+          c.id === editingCompany.id ? updated : c
+        )
+      );
+      setEditingCompany(null);
+    } catch (error) {
+      alert('Failed to update company: ' + error.message);
+    }
   };
 
   const cancelEdit = () => {
     setEditingCompany(null);
   };
 
+  // Monthly data edit state
+  const [selectedAssetForEdit, setSelectedAssetForEdit] = useState(null);
+  const [monthlyValues, setMonthlyValues] = useState({});
+
+  const startEditMonthly = (assetName) => {
+    setSelectedAssetForEdit(assetName);
+    setMonthlyValues(assetMonthlyData[assetName] || {});
+  };
+
+  const saveMonthlyValues = async () => {
+    try {
+      await updateAssetMonthlyData(selectedAssetForEdit, monthlyValues);
+      setAssetMonthlyData((prev) => ({
+        ...prev,
+        [selectedAssetForEdit]: monthlyValues
+      }));
+      setSelectedAssetForEdit(null);
+    } catch (error) {
+      alert('Failed to save monthly values: ' + error.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Admin Panel</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-semibold mb-2">Add Holding</h3>
-          <form onSubmit={addHolding} className="space-y-2">
-            <input className="w-full px-3 py-2 border rounded" placeholder="Name" value={hName} onChange={(e)=>setHName(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Value" type="number" value={hValue} onChange={(e)=>setHValue(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Allocation (e.g. 5%)" value={hAllocation} onChange={(e)=>setHAllocation(e.target.value)} />
-            <select className="w-full px-3 py-2 border rounded" value={hType} onChange={(e)=>setHType(e.target.value)}>
-              <option>Equity</option>
-              <option>Fixed Income</option>
-              <option>Real Estate</option>
-              <option>Cryptocurrencies</option>
-              <option>Cash</option>
-            </select>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded">Add Holding</button>
-          </form>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-semibold mb-2">Add Asset Allocation</h3>
-          <form onSubmit={addAllocation} className="space-y-2">
-            <input className="w-full px-3 py-2 border rounded" placeholder="Name" value={aName} onChange={(e)=>setAName(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Value" type="number" value={aValue} onChange={(e)=>setAValue(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Color" value={aColor} onChange={(e)=>setAColor(e.target.value)} />
-            <button className="px-4 py-2 bg-green-600 text-white rounded">Add Allocation</button>
-          </form>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-semibold mb-2">Add Company</h3>
-          <form onSubmit={addCompany} className="space-y-2">
-            <input className="w-full px-3 py-2 border rounded" placeholder="Company Name" value={cName} onChange={(e)=>setCName(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Value" type="number" value={cValue} onChange={(e)=>setCValue(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Sector" value={cSector} onChange={(e)=>setCSector(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Ownership" value={cOwnership} onChange={(e)=>setCOwnership(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded" placeholder="Country" value={cCountry} onChange={(e)=>setCCountry(e.target.value)} />
-            <button className="px-4 py-2 bg-purple-600 text-white rounded">Add Company</button>
-          </form>
-        </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Add Company</h3>
+        <form onSubmit={addCompany} className="space-y-2 grid grid-cols-2 gap-2">
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Company Name" value={cName} onChange={(e)=>setCName(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Value" type="number" value={cValue} onChange={(e)=>setCValue(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Sector" value={cSector} onChange={(e)=>setCSector(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Ownership" value={cOwnership} onChange={(e)=>setCOwnership(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-2" placeholder="Country" value={cCountry} onChange={(e)=>setCCountry(e.target.value)} />
+          <button className="px-4 py-2 bg-purple-600 text-white rounded col-span-2">Add Company</button>
+        </form>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h4 className="font-semibold mb-2">Recent Holdings</h4>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h4 className="font-semibold mb-4">Recent Companies</h4>
+        {editingCompany ? (
+          <div className="border p-4 rounded space-y-2">
+            <h5 className="font-medium">Edit Company</h5>
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editName} onChange={(e)=>setEditName(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editValue} onChange={(e)=>setEditValue(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Sector" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Ownership" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
+            <div className="flex gap-2">
+              <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveEdit}>Save</button>
+              <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={cancelEdit}>Cancel</button>
+            </div>
+          </div>
+        ) : (
           <ul className="space-y-2 text-sm">
-            {holdings.slice(0,6).map((h, i) => (
-              <li key={i} className="border p-2 rounded">{h.name} — {h.type} — ${h.value.toLocaleString ? h.value.toLocaleString() : h.value} — {h.allocation}</li>
+            {equitiesCompanies.map((c, i) => (
+              <li key={i} className="border p-2 rounded flex items-center justify-between">
+                <span>{c.name} — {c.sector} — {c.country}</span>
+                <div className="flex gap-1">
+                  <button
+                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                    onClick={() => startEdit(c)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                    onClick={() => deleteCompany(c)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
             ))}
           </ul>
-        </div>
+        )}
+      </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <h4 className="font-semibold mb-2">Asset Allocation</h4>
-          <ul className="space-y-2 text-sm">
-            {assetAllocation.slice(0,6).map((a, i) => (
-              <li key={i} className="border p-2 rounded">{a.name} — {a.value.toLocaleString ? a.value.toLocaleString() : a.value}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h4 className="font-semibold mb-2">Recent Companies</h4>
-          {editingCompany ? (
-            <div className="border p-4 rounded space-y-2">
-              <h5 className="font-medium">Edit Company</h5>
-              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editName} onChange={(e)=>setEditName(e.target.value)} />
-              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editValue} onChange={(e)=>setEditValue(e.target.value)} />
-              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Sector" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
-              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Ownership" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
-              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
-              <div className="flex gap-2">
-                <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveEdit}>Save</button>
-                <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={cancelEdit}>Cancel</button>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Edit Asset Monthly Values</h3>
+        {selectedAssetForEdit ? (
+          <div className="space-y-3">
+            <h4 className="font-medium">Edit {selectedAssetForEdit}</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((month) => (
+                <div key={month}>
+                  <label className="text-xs text-gray-600 capitalize">{month}</label>
+                  <input
+                    className="w-full px-2 py-1 border rounded text-sm"
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter value in RM"
+                    value={monthlyValues[month] ? (monthlyValues[month] * 3.7).toFixed(2) : ''}
+                    onChange={(e) => {
+                      const rmValue = parseFloat(e.target.value) || 0;
+                      setMonthlyValues((prev) => ({ ...prev, [month]: rmValue / 3.7 }));
+                    }}
+                  />
+                </div>
+              ))}
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-600">Incorporated In</label>
+                <input
+                  className="w-full px-2 py-1 border rounded text-sm"
+                  value={monthlyValues.incorporated || ''}
+                  onChange={(e) => setMonthlyValues((prev) => ({ ...prev, incorporated: e.target.value }))}
+                  placeholder="e.g., Luxembourg"
+                />
               </div>
             </div>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {equitiesCompanies.slice(0,6).map((c, i) => (
-                <li key={i} className="border p-2 rounded flex items-center justify-between">
-                  <span>{c.name} — {c.sector} — {c.country}</span>
-                  <div className="flex gap-1">
-                    <button
-                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                      onClick={() => startEdit(c)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="px-2 py-1 bg-red-500 text-white rounded text-xs"
-                      onClick={() => deleteCompany(c)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <button
-          className="px-4 py-2 bg-red-500 text-white rounded"
-          onClick={() => {
-            // clear Nur app keys and reload so initial values are restored
-            try {
-              ['nur:performanceData','nur:assetAllocation','nur:holdings','nur:globalMarketData','nur:equitiesData','nur:equitiesCompanies','nur:marketSegments'].forEach(k => localStorage.removeItem(k));
-            } catch (e) {}
-            window.location.reload();
-          }}
-        >
-          Reset Stored Data
-        </button>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded"
+                onClick={saveMonthlyValues}
+              >
+                Save
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={() => setSelectedAssetForEdit(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {equitiesCompanies.map((asset, idx) => (
+              <button
+                key={idx}
+                className="w-full text-left p-3 border rounded hover:bg-gray-50 flex justify-between items-center"
+                onClick={() => startEditMonthly(asset.name)}
+              >
+                <span>{asset.name}</span>
+                <span className="px-2 py-1 bg-blue-500 text-white rounded text-xs">Edit Monthly</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

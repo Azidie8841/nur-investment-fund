@@ -3,28 +3,58 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, DollarSign, Target, FileText, Users, Menu, X, Home, Briefcase, Shield, BookOpen, Calendar } from 'lucide-react';
 import AdminPanel from './AdminPanel';
+import UserProfilePanel from './UserProfilePanel';
+import LoginPage from './LoginPage';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedInvestmentType, setSelectedInvestmentType] = useState(null);
-  const [user] = useState({ name: 'Family Member', role: 'Investor' });
-  const initialPerformanceData = [
-    { month: 'Jan', value: 950000 },
-    { month: 'Feb', value: 980000 },
-    { month: 'Mar', value: 1020000 },
-    { month: 'Apr', value: 1050000 },
-    { month: 'May', value: 1080000 },
-    { month: 'Jun', value: 1150000 },
-    { month: 'Jul', value: 1200000 },
-    { month: 'Aug', value: 1180000 },
-    { month: 'Sep', value: 1250000 },
-    { month: 'Oct', value: 1320000 },
-    { month: 'Nov', value: 1380000 },
-    { month: 'Dec', value: 1450000 }
-  ];
+  // Simulated current user (for demo, can be switched to login later)
+  const [user, setUser] = useState({ id: 1, name: 'Family Member', email: 'family@example.com', role: 'admin' });
 
+  // State for data from API
+  const [equitiesCompanies, setEquitiesCompanies] = useState([]);
+  const [assetMonthlyData, setAssetMonthlyData] = useState({});
+  const [profiles, setProfiles] = useState([]);
+  const [performanceData, setPerformanceData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load data from API on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [companies, monthlyData, perfData, userProfiles] = await Promise.all([
+          fetchEquitiesCompanies(),
+          fetchAssetMonthlyData(),
+          fetchPerformanceData(),
+          fetchUserProfiles()
+        ]);
+        
+        setEquitiesCompanies(companies);
+        setAssetMonthlyData(monthlyData);
+        setPerformanceData(perfData.map(p => ({ month: p.month, value: p.value })));
+        setProfiles(userProfiles);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading data from API:', err);
+        setError('Failed to load data. Make sure the API server is running on port 5000.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Find current user object by id if logged in
+  const currentUser = user ? profiles.find(p => p.id === user.id) : null;
+
+  // Static data for charts and displays
   const initialAssetAllocation = [
     { name: 'Equities', value: 580000, color: '#3b82f6' },
     { name: 'Fixed Income', value: 435000, color: '#10b981' },
@@ -32,17 +62,7 @@ const NurInvestmentFund = () => {
     { name: 'Gold', value: 87000, color: '#8b5cf6' },
     { name: 'Cash & Cash Equivalents', value: 58000, color: '#6b7280' }
   ];
-
-  const initialHoldings = [
-    { name: 'Equity ETF', type: 'Equity', value: 250000, allocation: '17.2%' },
-    { name: 'ASB 2', type: 'Fixed Income', value: 200000, allocation: '13.8%' },
-    { name: 'Real Estate Investment Trust', type: 'Real Estate', value: 180000, allocation: '12.4%' },
-    { name: 'Apple', type: 'Equity', value: 150000, allocation: '10.3%' },
-    { name: 'NVIDIA', type: 'Equity', value: 120000, allocation: '8.3%' },
-    { name: 'Bitcoin', type: 'Cryptocurrencies', value: 87000, allocation: '6.0%' },
-    { name: 'Money Market', type: 'Cash', value: 58000, allocation: '4.0%' },
-    { name: 'SPUS ETF', type: 'Equity', value: 120000, allocation: '8.3%' },
-  ];
+  const [assetAllocation] = useState(initialAssetAllocation);
 
   const initialGlobalMarketData = [
     { year: '1990', equities: 50, fixed: 30, real: 10, renewable: 0 },
@@ -69,12 +89,6 @@ const NurInvestmentFund = () => {
     { year: '2019', value: 11.9 }, { year: '2020', value: 12.5 }, { year: '2021', value: 13.2 },
     { year: '2022', value: 11.8 }, { year: '2023', value: 13.5 }, { year: '2024', value: 13.8 }
   ];
-  const initialEquitiesCompanies = [
-    { name: 'Equity ETF', value: 250000, sector: 'ETF', ownership: '—', country: 'Global' },
-    { name: 'Apple', value: 150000, sector: 'Technology', ownership: '—', country: 'United States' },
-    { name: 'NVIDIA', value: 120000, sector: 'Technology', ownership: '—', country: 'United States' },
-    { name: 'SPUS ETF', value: 120000, sector: 'ETF', ownership: '—', country: 'United States' }
-  ];
 
   const initialMarketSegments = [
     { name: 'Equities', value: 13841391791701, countries: 62, companies: 8314, color: '#1e40af' },
@@ -83,36 +97,17 @@ const NurInvestmentFund = () => {
     { name: 'Renewable Energy', value: 84238157610, countries: 5, investments: 10, color: '#7c3aed' }
   ];
 
-  // Move initial arrays into component state so admin can edit them
-  // small helper to persist state to localStorage
-  const useLocalState = (key, initial) => {
-    const [state, setState] = useState(() => {
-      try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : initial;
-      } catch (e) {
-        return initial;
-      }
-    });
+  const [selectedAsset, setSelectedAsset] = useState(null);
 
-    useEffect(() => {
-      try {
-        localStorage.setItem(key, JSON.stringify(state));
-      } catch (e) {
-        // ignore write errors
-      }
-    }, [key, state]);
-
-    return [state, setState];
-  };
-
-  const [performanceData, setPerformanceData] = useLocalState('nur:performanceData', initialPerformanceData);
-  const [assetAllocation, setAssetAllocation] = useLocalState('nur:assetAllocation', initialAssetAllocation);
-  const [holdings, setHoldings] = useLocalState('nur:holdings', initialHoldings);
-  const [globalMarketData, setGlobalMarketData] = useLocalState('nur:globalMarketData', initialGlobalMarketData);
-  const [equitiesData, setEquitiesData] = useLocalState('nur:equitiesData', initialEquitiesData);
-  const [equitiesCompanies, setEquitiesCompanies] = useLocalState('nur:equitiesCompanies', initialEquitiesCompanies);
-  const [marketSegments, setMarketSegments] = useLocalState('nur:marketSegments', initialMarketSegments);
+  // Convert equitiesCompanies to holdings format for Portfolio view
+  const holdings = equitiesCompanies.map(company => ({
+    name: company.name,
+    type: company.sector || 'Investment',
+    value: company.value || 0,
+    allocation: equitiesCompanies.length > 0 
+      ? `${((company.value / (equitiesCompanies.reduce((sum, c) => sum + (c.value || 0), 0))) * 100).toFixed(1)}%`
+      : '0%'
+  }));
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
@@ -122,57 +117,17 @@ const NurInvestmentFund = () => {
     { id: 'governance', name: 'Governance', icon: Shield },
     { id: 'documents', name: 'Documents', icon: FileText },
     { id: 'admin', name: 'Admin', icon: Shield },
-    { id: 'family', name: 'Family', icon: Users },
+    { id: 'profiles', name: 'User Profiles', icon: Users, adminOnly: true },
+    { id: 'myprofile', name: 'My Profile', icon: Users },
     { id: 'education', name: 'Education', icon: BookOpen },
     { id: 'meetings', name: 'Meetings', icon: Calendar }
   ];
 
   const DashboardView = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Fund Value</p>
-              <p className="text-2xl font-bold text-gray-900">$1,450,000</p>
-              <p className="text-sm text-green-600 mt-1">+8.2% YTD</p>
-            </div>
-            <DollarSign className="w-8 h-8 text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Your Stake</p>
-              <p className="text-2xl font-bold text-gray-900">$290,000</p>
-              <p className="text-sm text-gray-500 mt-1">20% ownership</p>
-            </div>
-            <Target className="w-8 h-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Annual Return</p>
-              <p className="text-2xl font-bold text-gray-900">12.4%</p>
-              <p className="text-sm text-gray-500 mt-1">vs 10.2% benchmark</p>
-            </div>
-            <TrendingUp className="w-8 h-8 text-purple-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Last Distribution</p>
-              <p className="text-2xl font-bold text-gray-900">$18,000</p>
-              <p className="text-sm text-gray-500 mt-1">Q4 2024</p>
-            </div>
-            <Users className="w-8 h-8 text-orange-600" />
-          </div>
-        </div>
+      <div className="text-center py-8">
+        <p className="text-sm text-gray-600 mb-2">THE FUND VALUE</p>
+        <p className="text-4xl font-bold text-blue-600">RM 5,367,500</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -309,7 +264,128 @@ const NurInvestmentFund = () => {
     </div>
   );
 
-  const EquitiesDetailView = () => (
+  const AssetDetailView = ({ assetName }) => {
+    const asset = equitiesCompanies.find(a => a.name === assetName);
+    const monthlyData = assetMonthlyData[assetName] || {};
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthLabels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    // Find the latest month with a value > 0
+    let latestMonthValue = monthlyData.dec || asset.value;
+    for (let i = months.length - 1; i >= 0; i--) {
+      if (monthlyData[months[i]] && monthlyData[months[i]] > 0) {
+        latestMonthValue = monthlyData[months[i]];
+        break;
+      }
+    }
+    
+    const recentValue = latestMonthValue;
+    const yearComparisonData = [
+      { label: '2024', value: 1268.13 / 3.7 },
+      { label: '2025', value: recentValue }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setSelectedAsset(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to Equities
+        </button>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-4">{assetName}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div><span className="font-semibold">Asset Name:</span> {assetName}</div>
+            <div><span className="font-semibold">Recent Value:</span> RM {(recentValue * 3.7).toLocaleString()}</div>
+            <div><span className="font-semibold">Sector:</span> {asset.sector}</div>
+            <div><span className="font-semibold">Country:</span> {asset.country}</div>
+            <div className="md:col-span-2"><span className="font-semibold">Incorporated in:</span> {monthlyData.incorporated}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Year Comparison</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yearComparisonData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { maximumFractionDigits: 2 })}`} />
+              <Bar dataKey="value" fill="#1e40af" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Values (2025)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {monthLabels.map((m) => (
+                    <th key={m} className="px-2 py-2 text-left font-semibold">{m}</th>
+                  ))}
+                  <th className="px-2 py-2 text-left font-semibold bg-blue-100">Recent 2025 Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {months.map((m) => (
+                    <td key={m} className="px-2 py-2 border-t">RM {((monthlyData[m] || 0) * 3.7).toLocaleString()}</td>
+                  ))}
+                  <td className="px-2 py-2 border-t bg-blue-50 font-semibold">RM {(recentValue * 3.7).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Get most recent monthly value for a company
+  const getRecentMonthlyValue = (companyName) => {
+    const monthlyData = assetMonthlyData[companyName];
+    if (!monthlyData) return 0;
+    
+    // Array of months in order (most recent first)
+    const months = ['dec', 'nov', 'oct', 'sep', 'aug', 'jul', 'jun', 'may', 'apr', 'mar', 'feb', 'jan'];
+    
+    for (let month of months) {
+      if (monthlyData[month] && monthlyData[month] > 0) {
+        return monthlyData[month];
+      }
+    }
+    return 0;
+  };
+
+  // Calculate total equities market value in RM
+  const calculateTotalEquitiesValue = () => {
+    return equitiesCompanies.reduce((total, company) => {
+      const recentValue = getRecentMonthlyValue(company.name);
+      const displayValue = recentValue > 0 ? recentValue * 3.7 : company.value * 3.7;
+      return total + displayValue;
+    }, 0);
+  };
+
+  // Calculate equities segment data for cards
+  const getEquitiesSegmentData = () => {
+    const totalRm = calculateTotalEquitiesValue();
+    const totalValue = totalRm / 3.7; // Convert back to base currency for calculation
+    return {
+      name: 'Equities',
+      value: totalValue,
+      countries: 1, // Can be updated if you have country data
+      companies: equitiesCompanies.length,
+      color: '#1e40af'
+    };
+  };
+
+  const EquitiesDetailView = () => {
+    const totalValue = calculateTotalEquitiesValue();
+    
+    return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <button 
@@ -321,8 +397,8 @@ const NurInvestmentFund = () => {
         
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Equities</h2>
-          <p className="text-gray-600 mt-2">13,841,391,791,701 NOK</p>
-          <p className="text-sm text-gray-500">62 countries • 8,314 investments • 70.6% of all investments</p>
+          <p className="text-gray-600 mt-2">RM {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-sm text-gray-500">{equitiesCompanies.length} companies • Total market value</p>
         </div>
 
         <div className="mb-8">
@@ -339,25 +415,27 @@ const NurInvestmentFund = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-3 px-4 font-semibold">Company</th>
-                  <th className="text-right py-3 px-4 font-semibold">Value NOK</th>
+                  <th className="text-left py-3 px-4 font-semibold">Asset</th>
+                  <th className="text-right py-3 px-4 font-semibold">Market Value (RM)</th>
                   <th className="text-left py-3 px-4 font-semibold">Sector</th>
-                  <th className="text-right py-3 px-4 font-semibold">Ownership</th>
                   <th className="text-left py-3 px-4 font-semibold">Country</th>
                 </tr>
               </thead>
               <tbody>
-                {equitiesCompanies.map((company, idx) => (
-                  <tr key={idx} className="border-t hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <a href="#" className="text-blue-600 hover:underline">{company.name}</a>
-                    </td>
-                    <td className="py-3 px-4 text-right">{company.value.toLocaleString()}</td>
-                    <td className="py-3 px-4">{company.sector}</td>
-                    <td className="py-3 px-4 text-right">{company.ownership}</td>
-                    <td className="py-3 px-4">{company.country}</td>
-                  </tr>
-                ))}
+                {equitiesCompanies.map((company, idx) => {
+                  const recentValue = getRecentMonthlyValue(company.name);
+                  const displayValue = recentValue > 0 ? recentValue * 3.7 : company.value * 3.7;
+                  return (
+                    <tr key={idx} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedAsset(company.name)}>
+                      <td className="py-3 px-4">
+                        <a className="text-blue-600 hover:underline">{company.name}</a>
+                      </td>
+                      <td className="py-3 px-4 text-right">RM {displayValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4">{company.sector}</td>
+                      <td className="py-3 px-4">{company.country}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -369,29 +447,71 @@ const NurInvestmentFund = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
-          <h3 className="text-lg font-semibold mb-4">Historic Investments - Equities</h3>
+          <div className="bg-white rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Historic Investments - Equities (2025)</h3>
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={equitiesData}>
+            <BarChart data={[{ year: '2025', value: calculateTotalEquitiesValue() / 3.7 }]}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
               <YAxis />
-              <Tooltip formatter={(value) => `${value}T NOK`} />
+              <Tooltip 
+                formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                labelFormatter={(label) => `Year: ${label}`}
+              />
               <Bar dataKey="value" fill="#1e40af" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
-  const AllInvestmentsView = () => (
+  const AllInvestmentsView = () => {
+    const equitiesSegment = getEquitiesSegmentData();
+    const totalAllInvestments = equitiesSegment.value;
+    
+    // Market segments - static data with Equities calculated from actual data
+    const marketSegments = [
+      {
+        name: 'Equities',
+        value: totalAllInvestments,
+        countries: equitiesSegment.countries,
+        companies: equitiesSegment.companies,
+        color: '#1e40af'
+      },
+      {
+        name: 'Fixed Income',
+        value: 1433273569,
+        countries: 50,
+        bonds: 1683,
+        color: '#059669'
+      },
+      {
+        name: 'Real Estate',
+        value: 98721018,
+        countries: 15,
+        investments: 1341,
+        color: '#d97706'
+      },
+      {
+        name: 'Renewable Energy',
+        value: 22748312,
+        countries: 5,
+        investments: 10,
+        color: '#7c3aed'
+      }
+    ];
+    
+    const totalValue = marketSegments.reduce((sum, seg) => sum + seg.value, 0);
+    
+    return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">All Investments Overview</h2>
-          <p className="text-gray-600 mt-2">Total market value: 19,601,837,632,886 NOK</p>
-          <p className="text-sm text-gray-500">70 countries • 11,308 investments • 100% of all investments</p>
+          <p className="text-gray-600 mt-2">Total market value: RM {(totalValue * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-sm text-gray-500">{marketSegments.reduce((sum, seg) => sum + seg.countries, 0)} countries • {equitiesSegment.companies + (1683 + 1341 + 10)} investments • 100% of all investments</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -407,12 +527,12 @@ const NurInvestmentFund = () => {
             >
               <h3 className="text-lg font-semibold mb-2" style={{ color: segment.color }}>{segment.name}</h3>
               <p className="text-2xl font-bold text-gray-900 mb-2">
-                {(segment.value / 1000000000000).toFixed(2)}T NOK
+                RM {(segment.value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <div className="space-y-1 text-sm text-gray-600">
                 <p>{segment.countries} countries</p>
                 <p>{segment.companies || segment.bonds || segment.investments} {segment.companies ? 'companies' : segment.bonds ? 'bonds' : 'investments'}</p>
-                <p>{((segment.value / 19601837632886) * 100).toFixed(1)}% of all investments</p>
+                <p>{((segment.value / totalValue) * 100).toFixed(1)}% of all investments</p>
               </div>
             </div>
           ))}
@@ -421,7 +541,7 @@ const NurInvestmentFund = () => {
         <div className="bg-white rounded-lg border p-6">
           <h3 className="text-lg font-semibold mb-4">Historic Investments (Billions NOK)</h3>
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={globalMarketData}>
+            <BarChart data={initialGlobalMarketData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
               <YAxis />
@@ -436,7 +556,8 @@ const NurInvestmentFund = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const DocumentsView = () => (
     <div className="space-y-6">
@@ -467,10 +588,15 @@ const NurInvestmentFund = () => {
   );
 
   const renderContent = () => {
+    // if (!user) {
+    //   return <LoginPage profiles={profiles} onLogin={setUser} />;
+    // }
+    if (selectedAsset) {
+      return <AssetDetailView assetName={selectedAsset} />;
+    }
     if (activeSection === 'allinvestments' && selectedInvestmentType === 'equities') {
       return <EquitiesDetailView />;
     }
-    
     switch (activeSection) {
       case 'dashboard':
         return <DashboardView />;
@@ -480,21 +606,35 @@ const NurInvestmentFund = () => {
         return <AllInvestmentsView />;
       case 'governance':
         return <GovernanceView />;
-        case 'admin':
-          return (
-            <AdminPanel
-              holdings={holdings}
-              setHoldings={setHoldings}
-              assetAllocation={assetAllocation}
-              setAssetAllocation={setAssetAllocation}
-              equitiesCompanies={equitiesCompanies}
-              setEquitiesCompanies={setEquitiesCompanies}
-              performanceData={performanceData}
-              setPerformanceData={setPerformanceData}
-              marketSegments={marketSegments}
-              setMarketSegments={setMarketSegments}
-            />
-          );
+      case 'admin':
+        return (
+          <AdminPanel
+            equitiesCompanies={equitiesCompanies}
+            setEquitiesCompanies={setEquitiesCompanies}
+            assetMonthlyData={assetMonthlyData}
+            setAssetMonthlyData={setAssetMonthlyData}
+          />
+        );
+      case 'profiles':
+        if (currentUser && currentUser.role === 'admin') {
+          return <UserProfilePanel user={currentUser} profiles={profiles} setProfiles={setProfiles} />;
+        }
+        return (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <p className="text-gray-600">Access denied</p>
+          </div>
+        );
+      case 'myprofile':
+        return (
+          <div className="space-y-6 max-w-lg mx-auto">
+            <h2 className="text-2xl font-bold mb-4">My Profile</h2>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="mb-2"><span className="font-semibold">Name:</span> {currentUser?.name}</div>
+              <div className="mb-2"><span className="font-semibold">Email:</span> {currentUser?.email}</div>
+              <div className="mb-2"><span className="font-semibold">Role:</span> {currentUser?.role}</div>
+            </div>
+          </div>
+        );
       case 'documents':
         return <DocumentsView />;
       default:
@@ -505,6 +645,41 @@ const NurInvestmentFund = () => {
         );
     }
   };
+
+  if (!user) {
+    return renderContent();
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 text-blue-600">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+          </div>
+          <p className="text-lg text-gray-700">Loading your investment data...</p>
+          {error && <p className="text-red-600 mt-4">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-6 bg-white rounded-lg shadow">
+          <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
+          <p className="text-gray-700">{error}</p>
+          <button 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -530,24 +705,29 @@ const NurInvestmentFund = () => {
                 <p className="text-sm text-gray-600">Family Wealth Management</p>
               </div>
             </div>
-            
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
                 <div className="text-right">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-gray-600">{user.role}</p>
+                  <p className="text-sm font-medium">{currentUser?.name}</p>
+                  <p className="text-xs text-gray-600">{currentUser?.role}</p>
                 </div>
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
+              <button
+                className="ml-4 px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                onClick={() => setUser(null)}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       <div className="flex">
-        <aside className={`${
+        <aside className={`$
           mobileMenuOpen ? 'block' : 'hidden'
         } md:${sidebarOpen ? 'block' : 'hidden'} w-64 bg-white border-r min-h-screen fixed md:relative left-0 top-0 z-40 transition-all duration-300`}>
           <div className="flex justify-end p-4 md:hidden">
