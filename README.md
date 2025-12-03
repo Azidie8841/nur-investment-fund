@@ -154,13 +154,6 @@ The SQLite database is automatically created on first run with these tables:
 - `performance_data` - Performance metrics
 - `user_profiles` - User information
 
-### Important: Database is NOT Committed to Git
-
-The database file (`server/nur_fund.db`) is excluded from version control. When you clone and run the project:
-1. The database is automatically created on first server start
-2. Default seed data is inserted automatically
-3. All your edits are saved locally
-
 ## Currency Conversion
 
 - Base values are stored in the database
