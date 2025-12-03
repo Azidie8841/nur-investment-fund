@@ -1,4 +1,4 @@
-# Nur Investment Fund Management System
+# Investment Fund Management System
 
 A React-based investment fund management application with admin controls, user profiles, and real-time data tracking. Built with Vite, React 18, Tailwind CSS, SQLite, and Express.js.
 
