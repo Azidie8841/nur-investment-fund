@@ -1,4 +1,4 @@
-# Nur Investment Fund Management System
+# Investment Fund Management System
 
 A React-based investment fund management application with admin controls, user profiles, and real-time data tracking. Built with Vite, React 18, Tailwind CSS, SQLite, and Express.js.
 
@@ -153,13 +153,6 @@ The SQLite database is automatically created on first run with these tables:
 - `asset_monthly_data` - Monthly asset values
 - `performance_data` - Performance metrics
 - `user_profiles` - User information
-
-### Important: Database is NOT Committed to Git
-
-The database file (`server/nur_fund.db`) is excluded from version control. When you clone and run the project:
-1. The database is automatically created on first server start
-2. Default seed data is inserted automatically
-3. All your edits are saved locally
 
 ## Currency Conversion
 
