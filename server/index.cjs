@@ -179,6 +179,88 @@ app.delete('/api/user-profiles/:id', (req, res) => {
   }
 });
 
+// ===== Savings Records Routes =====
+app.get('/api/savings-records', (req, res) => {
+  try {
+    const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/savings-records', (req, res) => {
+  try {
+    const { amount, record_date, notes } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO savings_records (amount, record_date, notes)
+      VALUES (?, ?, ?)
+    `);
+    const result = stmt.run(amount, record_date, notes);
+    res.json({ id: result.lastInsertRowid, amount, record_date, notes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/savings-records/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM savings_records WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Savings Goals Routes =====
+app.get('/api/savings-goals', (req, res) => {
+  try {
+    const goals = db.prepare('SELECT * FROM savings_goals ORDER BY target_date DESC').all();
+    res.json(goals);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/savings-goals', (req, res) => {
+  try {
+    const { goal_name, target_amount, target_date, description } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO savings_goals (goal_name, target_amount, target_date, status, description)
+      VALUES (?, ?, ?, 'Active', ?)
+    `);
+    const result = stmt.run(goal_name, target_amount, target_date, description);
+    res.json({ id: result.lastInsertRowid, goal_name, target_amount, target_date, status: 'Active', description });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/savings-goals/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { goal_name, target_amount, target_date, status, description } = req.body;
+    db.prepare(`
+      UPDATE savings_goals SET goal_name = ?, target_amount = ?, target_date = ?, status = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(goal_name, target_amount, target_date, status, description, id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/savings-goals/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM savings_goals WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server running' });

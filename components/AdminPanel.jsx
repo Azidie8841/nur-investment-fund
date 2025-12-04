@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, updateAssetMonthlyData } from '../utils/api';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, updateAssetMonthlyData, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
   setEquitiesCompanies,
   assetMonthlyData,
   setAssetMonthlyData,
+  savingsRecords,
+  setSavingsRecords,
+  savingsGoals,
+  setSavingsGoals,
 }) {
   // holdings form state
   const [hName, setHName] = useState('');
@@ -32,6 +36,25 @@ export default function AdminPanel({
   const [editSector, setEditSector] = useState('');
   const [editOwnership, setEditOwnership] = useState('');
   const [editCountry, setEditCountry] = useState('');
+
+  // Savings Record form state
+  const [recordAmount, setRecordAmount] = useState('');
+  const [recordDate, setRecordDate] = useState('');
+  const [recordNotes, setRecordNotes] = useState('');
+  const [recordType, setRecordType] = useState('in'); // 'in' for cash in, 'out' for cash out
+
+  // Savings Goal form state
+  const [goalName, setGoalName] = useState('');
+  const [goalAmount, setGoalAmount] = useState('');
+  const [goalDate, setGoalDate] = useState('');
+  const [goalDescription, setGoalDescription] = useState('');
+
+  // Savings Goal edit state
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editGoalName, setEditGoalName] = useState('');
+  const [editGoalAmount, setEditGoalAmount] = useState('');
+  const [editGoalDate, setEditGoalDate] = useState('');
+  const [editGoalDescription, setEditGoalDescription] = useState('');
 
   // simple helpers
   const addCompany = async (e) => {
@@ -118,6 +141,181 @@ export default function AdminPanel({
       setSelectedAssetForEdit(null);
     } catch (error) {
       alert('Failed to save monthly values: ' + error.message);
+    }
+  };
+
+  // Savings Record handlers
+  const handleAddRecord = async () => {
+    console.log('Add Record clicked');
+    console.log('recordAmount:', recordAmount, 'type:', typeof recordAmount);
+    console.log('recordDate:', recordDate, 'type:', typeof recordDate);
+    
+    // Trim whitespace
+    const trimmedAmount = recordAmount.trim();
+    const amount = parseFloat(trimmedAmount);
+    
+    console.log('trimmedAmount:', trimmedAmount);
+    console.log('parsed amount:', amount, 'isNaN:', isNaN(amount));
+    
+    if (!trimmedAmount || isNaN(amount)) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    
+    if (amount <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
+    
+    if (!recordDate) {
+      alert('Please select a date');
+      return;
+    }
+    
+    try {
+      // For cash out, store as negative value
+      const finalAmount = recordType === 'out' ? -amount : amount;
+      console.log('Sending to API:', { amount: finalAmount, record_date: recordDate, notes: recordNotes, type: recordType });
+      const newRecord = await addSavingsRecord({
+        amount: finalAmount,
+        record_date: recordDate,
+        notes: recordNotes
+      });
+      console.log('Record added:', newRecord);
+      setSavingsRecords((prev) => [newRecord, ...prev]);
+      setRecordAmount('');
+      setRecordDate('');
+      setRecordNotes('');
+      setRecordType('in');
+      alert('Savings record added successfully');
+    } catch (error) {
+      console.error('Error adding record:', error);
+      alert('Error adding savings record: ' + error.message);
+    }
+  };
+
+  const handleDeleteRecord = async (id) => {
+    console.log('Delete button clicked for record:', id);
+    if (!window.confirm('Delete this savings record?')) return;
+    try {
+      await deleteSavingsRecord(id);
+      setSavingsRecords((prev) => prev.filter((r) => r.id !== id));
+      alert('Record deleted');
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  // Savings Goal handlers
+  const handleAddGoal = async () => {
+    console.log('Add Goal clicked');
+    console.log('goalName:', goalName, 'type:', typeof goalName);
+    console.log('goalAmount:', goalAmount, 'type:', typeof goalAmount);
+    
+    // Trim whitespace
+    const trimmedName = goalName.trim();
+    const trimmedAmount = goalAmount.trim();
+    const amount = parseFloat(trimmedAmount);
+    
+    console.log('trimmedName:', trimmedName);
+    console.log('trimmedAmount:', trimmedAmount);
+    console.log('parsed amount:', amount, 'isNaN:', isNaN(amount));
+    
+    if (!trimmedName) {
+      alert('Please enter a goal name');
+      return;
+    }
+    
+    if (!trimmedAmount || isNaN(amount)) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    
+    if (amount <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
+    
+    try {
+      console.log('Sending to API:', { goal_name: trimmedName, target_amount: amount, target_date: goalDate, description: goalDescription });
+      const newGoal = await addSavingsGoal({
+        goal_name: trimmedName,
+        target_amount: amount,
+        target_date: goalDate,
+        description: goalDescription
+      });
+      console.log('Goal added:', newGoal);
+      setSavingsGoals((prev) => [newGoal, ...prev]);
+      setGoalName('');
+      setGoalAmount('');
+      setGoalDate('');
+      setGoalDescription('');
+      alert('Savings goal added successfully');
+    } catch (error) {
+      console.error('Error adding goal:', error);
+      alert('Error adding savings goal: ' + error.message);
+    }
+  };
+
+  const handleDeleteGoal = async (id) => {
+    console.log('Delete button clicked for goal:', id);
+    if (!window.confirm('Delete this savings goal?')) return;
+    try {
+      await deleteSavingsGoal(id);
+      setSavingsGoals((prev) => prev.filter((g) => g.id !== id));
+      alert('Goal deleted');
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const startEditGoal = (goal) => {
+    setEditingGoal(goal);
+    setEditGoalName(goal.goal_name);
+    setEditGoalAmount(goal.target_amount.toString());
+    setEditGoalDate(goal.target_date || '');
+    setEditGoalDescription(goal.description || '');
+  };
+
+  const cancelEditGoal = () => {
+    setEditingGoal(null);
+    setEditGoalName('');
+    setEditGoalAmount('');
+    setEditGoalDate('');
+    setEditGoalDescription('');
+  };
+
+  const saveEditGoal = async () => {
+    const amount = parseFloat(editGoalAmount);
+    if (!editGoalName || !editGoalAmount || isNaN(amount) || amount <= 0) {
+      alert('Please fill in all required fields with valid values');
+      return;
+    }
+    try {
+      await updateSavingsGoal(editingGoal.id, {
+        goal_name: editGoalName,
+        target_amount: amount,
+        target_date: editGoalDate,
+        description: editGoalDescription,
+        status: editingGoal.status
+      });
+      setSavingsGoals((prev) =>
+        prev.map((g) =>
+          g.id === editingGoal.id
+            ? {
+                ...g,
+                goal_name: editGoalName,
+                target_amount: amount,
+                target_date: editGoalDate,
+                description: editGoalDescription
+              }
+            : g
+        )
+      );
+      cancelEditGoal();
+      alert('Goal updated successfully');
+    } catch (error) {
+      alert('Error updating goal: ' + error.message);
     }
   };
 
@@ -238,6 +436,215 @@ export default function AdminPanel({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Savings Records Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Add Savings Record</h3>
+        <div className="space-y-2 grid grid-cols-4 gap-2">
+          <select 
+            value={recordType}
+            onChange={(e) => setRecordType(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1 bg-white"
+          >
+            <option value="in">Cash In</option>
+            <option value="out">Cash Out</option>
+          </select>
+          <input 
+            type="number" 
+            step="0.01"
+            placeholder="Amount (RM)" 
+            value={recordAmount}
+            onChange={(e) => setRecordAmount(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="date" 
+            value={recordDate}
+            onChange={(e) => setRecordDate(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="text" 
+            placeholder="Notes" 
+            value={recordNotes}
+            onChange={(e) => setRecordNotes(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <button 
+            onClick={handleAddRecord}
+            className="px-4 py-2 bg-blue-600 text-white rounded col-span-4"
+          >
+            Add Record
+          </button>
+        </div>
+
+        <h4 className="font-semibold mt-6 mb-3">Recent Savings Records</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left py-2 px-3">Date</th>
+                <th className="text-left py-2 px-3">Type</th>
+                <th className="text-right py-2 px-3">Amount (RM)</th>
+                <th className="text-left py-2 px-3">Notes</th>
+                <th className="text-center py-2 px-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {savingsRecords && savingsRecords.length > 0 ? (
+                savingsRecords.map((record) => (
+                  <tr key={record.id} className="border-t hover:bg-gray-50">
+                    <td className="py-2 px-3">{record.record_date}</td>
+                    <td className="py-2 px-3">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${record.amount >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {record.amount >= 0 ? 'Cash In' : 'Cash Out'}
+                      </span>
+                    </td>
+                    <td className={`py-2 px-3 text-right font-medium ${record.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {record.amount.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                    <td className="py-2 px-3">{record.notes || '-'}</td>
+                    <td className="py-2 px-3 text-center">
+                      <button 
+                        onClick={() => handleDeleteRecord(record.id)}
+                        className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="py-4 px-3 text-center text-gray-500">No savings records</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Savings Goals Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Add Savings Goal</h3>
+        <div className="space-y-2 grid grid-cols-2 gap-2">
+          <input 
+            type="text" 
+            placeholder="Goal Name" 
+            value={goalName}
+            onChange={(e) => setGoalName(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="number" 
+            step="0.01"
+            placeholder="Target Amount (RM)" 
+            value={goalAmount}
+            onChange={(e) => setGoalAmount(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="date" 
+            value={goalDate}
+            onChange={(e) => setGoalDate(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-2" 
+          />
+          <input 
+            type="text" 
+            placeholder="Description" 
+            value={goalDescription}
+            onChange={(e) => setGoalDescription(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-2" 
+          />
+          <button 
+            onClick={handleAddGoal}
+            className="px-4 py-2 bg-green-600 text-white rounded col-span-2"
+          >
+            Add Goal
+          </button>
+        </div>
+
+        <h4 className="font-semibold mt-6 mb-3">Savings Goals</h4>
+        {editingGoal ? (
+          <div className="border p-4 rounded space-y-3 mb-4 bg-blue-50">
+            <h5 className="font-medium">Edit Goal</h5>
+            <input 
+              type="text" 
+              placeholder="Goal Name" 
+              value={editGoalName}
+              onChange={(e) => setEditGoalName(e.target.value)}
+              className="w-full px-3 py-2 border rounded text-sm" 
+            />
+            <input 
+              type="number" 
+              step="0.01"
+              placeholder="Target Amount (RM)" 
+              value={editGoalAmount}
+              onChange={(e) => setEditGoalAmount(e.target.value)}
+              className="w-full px-3 py-2 border rounded text-sm" 
+            />
+            <input 
+              type="date" 
+              value={editGoalDate}
+              onChange={(e) => setEditGoalDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded text-sm" 
+            />
+            <input 
+              type="text" 
+              placeholder="Description" 
+              value={editGoalDescription}
+              onChange={(e) => setEditGoalDescription(e.target.value)}
+              className="w-full px-3 py-2 border rounded text-sm" 
+            />
+            <div className="flex gap-2">
+              <button 
+                onClick={saveEditGoal}
+                className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              >
+                Save
+              </button>
+              <button 
+                onClick={cancelEditGoal}
+                className="flex-1 px-3 py-2 bg-gray-400 text-white rounded text-sm hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {savingsGoals && savingsGoals.length > 0 ? (
+            savingsGoals.map((goal) => (
+              <div key={goal.id} className="p-3 border rounded hover:bg-gray-50">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <p className="font-medium">{goal.goal_name}</p>
+                    <p className="text-xs text-gray-600">Target: RM {goal.target_amount.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    {goal.target_date && <p className="text-xs text-gray-600">By: {goal.target_date}</p>}
+                    {goal.description && <p className="text-xs text-gray-600 mt-1">{goal.description}</p>}
+                  </div>
+                  <div className="flex gap-1 ml-2">
+                    <button 
+                      onClick={() => startEditGoal(goal)}
+                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteGoal(goal.id)}
+                      className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-2 py-4 text-center text-gray-500">No savings goals</div>
+          )}
+        </div>
       </div>
     </div>
   );

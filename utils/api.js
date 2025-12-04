@@ -168,3 +168,106 @@ export const deleteUserProfile = async (id) => {
     throw error;
   }
 };
+
+// Savings Records
+export const fetchSavingsRecords = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-records`);
+    const data = await handleResponse(res);
+    console.log('Fetched savings records:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching savings records:', error);
+    throw error;
+  }
+};
+
+export const addSavingsRecord = async (record) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    });
+    const data = await handleResponse(res);
+    console.log('Added savings record:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding savings record:', error);
+    throw error;
+  }
+};
+
+export const deleteSavingsRecord = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-records/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted savings record:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting savings record:', error);
+    throw error;
+  }
+};
+
+// Savings Goals
+export const fetchSavingsGoals = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-goals`);
+    const data = await handleResponse(res);
+    console.log('Fetched savings goals:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching savings goals:', error);
+    throw error;
+  }
+};
+
+export const addSavingsGoal = async (goal) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-goals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(goal)
+    });
+    const data = await handleResponse(res);
+    console.log('Added savings goal:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding savings goal:', error);
+    throw error;
+  }
+};
+
+export const updateSavingsGoal = async (id, goal) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-goals/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(goal)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated savings goal:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating savings goal:', error);
+    throw error;
+  }
+};
+
+export const deleteSavingsGoal = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-goals/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted savings goal:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting savings goal:', error);
+    throw error;
+  }
+};
+

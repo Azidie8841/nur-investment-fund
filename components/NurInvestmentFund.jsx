@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, DollarSign, Target, FileText, Users, Menu, X, Home, Briefcase, Shield, BookOpen, Calendar } from 'lucide-react';
+import { TrendingUp, DollarSign, Target, FileText, Users, Menu, X, Home, Briefcase, Shield, BookOpen, Calendar, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedInvestmentType, setSelectedInvestmentType] = useState(null);
+  const [financialDropdownOpen, setFinancialDropdownOpen] = useState(false);
+  const [investmentDropdownOpen, setInvestmentDropdownOpen] = useState(false);
   // Simulated current user (for demo, can be switched to login later)
   const [user, setUser] = useState({ id: 1, name: 'Family Member', email: 'family@example.com', role: 'admin' });
 
@@ -20,6 +24,8 @@ const NurInvestmentFund = () => {
   const [assetMonthlyData, setAssetMonthlyData] = useState({});
   const [profiles, setProfiles] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
+  const [savingsRecords, setSavingsRecords] = useState([]);
+  const [savingsGoals, setSavingsGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,17 +34,21 @@ const NurInvestmentFund = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [companies, monthlyData, perfData, userProfiles] = await Promise.all([
+        const [companies, monthlyData, perfData, userProfiles, records, goals] = await Promise.all([
           fetchEquitiesCompanies(),
           fetchAssetMonthlyData(),
           fetchPerformanceData(),
-          fetchUserProfiles()
+          fetchUserProfiles(),
+          fetchSavingsRecords(),
+          fetchSavingsGoals()
         ]);
         
         setEquitiesCompanies(companies);
         setAssetMonthlyData(monthlyData);
         setPerformanceData(perfData.map(p => ({ month: p.month, value: p.value })));
         setProfiles(userProfiles);
+        setSavingsRecords(records);
+        setSavingsGoals(goals);
         setError(null);
       } catch (err) {
         console.error('Error loading data from API:', err);
@@ -110,17 +120,32 @@ const NurInvestmentFund = () => {
   }));
 
   const navigation = [
-    { id: 'dashboard', name: 'Dashboard', icon: Home },
-    { id: 'portfolio', name: 'Portfolio', icon: Briefcase },
-    { id: 'performance', name: 'Performance', icon: TrendingUp },
-    { id: 'allinvestments', name: 'All Investments', icon: TrendingUp },
-    { id: 'governance', name: 'Governance', icon: Shield },
-    { id: 'documents', name: 'Documents', icon: FileText },
+    { 
+      id: 'financial', 
+      name: 'Financial', 
+      icon: DollarSign,
+      isGroup: true,
+      submenu: [
+        { 
+          id: 'investment',
+          name: 'Investment',
+          icon: Briefcase,
+          isSubGroup: true,
+          submenu: [
+            { id: 'dashboard', name: 'Dashboard', icon: Home },
+            { id: 'portfolio', name: 'Portfolio', icon: Briefcase },
+            { id: 'performance', name: 'Performance', icon: TrendingUp },
+            { id: 'allinvestments', name: 'All Investments', icon: TrendingUp },
+            { id: 'governance', name: 'Governance', icon: Shield },
+            { id: 'documents', name: 'Documents', icon: FileText }
+          ]
+        },
+        { id: 'savings', name: 'Savings', icon: DollarSign }
+      ]
+    },
     { id: 'admin', name: 'Admin', icon: Shield },
     { id: 'profiles', name: 'User Profiles', icon: Users, adminOnly: true },
-    { id: 'myprofile', name: 'My Profile', icon: Users },
-    { id: 'education', name: 'Education', icon: BookOpen },
-    { id: 'meetings', name: 'Meetings', icon: Calendar }
+    { id: 'myprofile', name: 'My Profile', icon: Users }
   ];
 
   const DashboardView = () => (
@@ -587,6 +612,350 @@ const NurInvestmentFund = () => {
     </div>
   );
 
+  const SavingsView = () => {
+    const totalSavings = savingsRecords.reduce((sum, record) => sum + (record.amount || 0), 0);
+    const totalGoal = savingsGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
+    const achievedPercent = totalGoal > 0 ? Math.round((totalSavings / totalGoal) * 100) : 0;
+
+    const downloadPDF = async () => {
+      try {
+        const element = document.getElementById('savings-report');
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= 297;
+        }
+
+        pdf.save(`Savings_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (error) {
+        alert('Error generating PDF: ' + error.message);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Savings & Investment Goals</h2>
+          <div className="flex gap-3">
+            <button
+              onClick={downloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              <Download size={18} />
+              <span className="text-sm">Download PDF</span>
+            </button>
+            {user?.role === 'admin' && (
+              <p className="text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded">Manage in Admin Tab</p>
+            )}
+          </div>
+        </div>
+        
+        <div id="savings-report" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-700 mb-1">Total Savings</p>
+              <p className="text-3xl font-bold text-blue-600">RM {totalSavings.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              <p className="text-xs text-gray-600 mt-2">{savingsRecords.length} records</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-700 mb-1">Savings Goals</p>
+              <p className="text-3xl font-bold text-green-600">RM {totalGoal.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              <p className="text-xs text-gray-600 mt-2">{savingsGoals.length} goals</p>
+            </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow p-6">
+            <p className="text-sm text-gray-700 mb-1">Achievement Rate</p>
+            <p className="text-3xl font-bold text-purple-600">{achievedPercent}%</p>
+            <p className="text-xs text-gray-600 mt-2">of total goal achieved</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow p-6">
+            <p className="text-sm text-gray-700 mb-1">Emergency Fund Coverage</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-bold text-orange-600">{Math.floor(totalSavings / 2561)}</p>
+              <p className="text-xs text-gray-600">months</p>
+              <span className="text-gray-400">•</span>
+              <p className="text-lg font-bold text-orange-500">{Math.floor((totalSavings % 2561) / (2561 / 4.33))}</p>
+              <p className="text-xs text-gray-600">weeks</p>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">at RM 2,561/month</p>
+            <div className="mt-3 pt-3 border-t border-orange-200">
+              {Math.floor(totalSavings / 2561) === 0 && (
+                <p className="text-xs font-semibold text-purple-600">💪 Great start! Every RM counts. Keep going!</p>
+              )}
+              {Math.floor(totalSavings / 2561) === 1 && (
+                <p className="text-xs font-semibold text-blue-600">🚀 One month covered! You're doing great. Keep it up!</p>
+              )}
+              {Math.floor(totalSavings / 2561) === 2 && (
+                <p className="text-xs font-semibold text-cyan-600">⭐ Two months! Almost there. Push for 3 months!</p>
+              )}
+              {Math.floor(totalSavings / 2561) >= 3 && Math.floor(totalSavings / 2561) < 6 && (
+                <p className="text-xs font-semibold text-green-600">✅ Solid emergency fund! Aim for 6 months next</p>
+              )}
+              {Math.floor(totalSavings / 2561) >= 6 && Math.floor(totalSavings / 2561) < 12 && (
+                <p className="text-xs font-semibold text-emerald-600">🏆 Excellent! You're well protected now</p>
+              )}
+              {Math.floor(totalSavings / 2561) >= 12 && (
+                <p className="text-xs font-semibold text-green-600">🎉 Amazing! 1+ year covered. You're a savings champion!</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Progress to Goal</h3>
+          <div className="mb-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm font-medium">Overall Progress</span>
+              <span className="text-sm text-gray-600">{achievedPercent}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${achievedPercent}%` }}></div>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600">RM {(totalGoal - totalSavings).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})} remaining</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Savings Chart</h3>
+          {savingsRecords.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={(() => {
+                  // Create all 12 months with 0 value
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  const monthlyData = months.map((month, index) => ({
+                    month,
+                    cashIn: 0,
+                    cashOut: 0,
+                    total: 0
+                  }));
+
+                  // Add actual savings data
+                  savingsRecords.forEach((record) => {
+                    const date = new Date(record.record_date);
+                    const monthIndex = date.getMonth();
+                    if (record.amount >= 0) {
+                      monthlyData[monthIndex].cashIn += record.amount;
+                    } else {
+                      monthlyData[monthIndex].cashOut += Math.abs(record.amount);
+                    }
+                  });
+
+                  // Calculate cumulative totals (including December now if data exists)
+                  let cumulativeTotal = 0;
+                  monthlyData.forEach((month, index) => {
+                    cumulativeTotal += (month.cashIn - month.cashOut);
+                    month.total = cumulativeTotal;
+                  });
+
+                  return monthlyData;
+                })()}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value) => `RM ${value.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                  labelFormatter={(label) => `${label}`}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="cashIn" 
+                  fill="#22c55e" 
+                  name="Cash In" 
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  dataKey="cashOut" 
+                  fill="#ef4444" 
+                  name="Cash Out" 
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  dataKey="total" 
+                  fill="#3b82f6" 
+                  name="Cumulative Total" 
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No savings data available
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Yearly Savings Chart</h3>
+          {savingsRecords.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={(() => {
+                  // Get all years from records, starting from 2025 onwards
+                  const yearsSet = new Set();
+                  savingsRecords.forEach((record) => {
+                    const year = new Date(record.record_date).getFullYear();
+                    if (year >= 2025) {
+                      yearsSet.add(year);
+                    }
+                  });
+
+                  // If no records from 2025 onwards, include 2025
+                  if (yearsSet.size === 0) {
+                    yearsSet.add(2025);
+                  }
+
+                  // Create year array in ascending order
+                  const yearsArray = Array.from(yearsSet).sort();
+                  
+                  // Initialize yearly data
+                  const yearlyData = yearsArray.map((year) => ({
+                    year: year.toString(),
+                    cashIn: 0,
+                    cashOut: 0,
+                    total: 0
+                  }));
+
+                  // Add actual savings data grouped by year
+                  savingsRecords.forEach((record) => {
+                    const year = new Date(record.record_date).getFullYear();
+                    if (year >= 2025) {
+                      const yearEntry = yearlyData.find((y) => y.year === year.toString());
+                      if (yearEntry) {
+                        if (record.amount >= 0) {
+                          yearEntry.cashIn += record.amount;
+                        } else {
+                          yearEntry.cashOut += Math.abs(record.amount);
+                        }
+                      }
+                    }
+                  });
+
+                  // Calculate cumulative totals across years
+                  let cumulativeTotal = 0;
+                  yearlyData.forEach((year) => {
+                    cumulativeTotal += (year.cashIn - year.cashOut);
+                    year.total = cumulativeTotal;
+                  });
+
+                  return yearlyData;
+                })()}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value) => `RM ${value.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                  labelFormatter={(label) => `${label}`}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="cashIn" 
+                  fill="#22c55e" 
+                  name="Cash In" 
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  dataKey="cashOut" 
+                  fill="#ef4444" 
+                  name="Cash Out" 
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  dataKey="total" 
+                  fill="#3b82f6" 
+                  name="Cumulative Total" 
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No savings data available
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Savings Records</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left py-3 px-4">Date</th>
+                  <th className="text-left py-3 px-4">Type</th>
+                  <th className="text-right py-3 px-4">Amount (RM)</th>
+                  <th className="text-left py-3 px-4">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {savingsRecords.length > 0 ? (
+                  savingsRecords.map((record) => (
+                    <tr key={record.id} className="border-t hover:bg-gray-50">
+                      <td className="py-3 px-4">{record.record_date}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${record.amount >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {record.amount >= 0 ? 'Cash In' : 'Cash Out'}
+                        </span>
+                      </td>
+                      <td className={`py-3 px-4 text-right font-medium ${record.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>{record.amount.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4">{record.notes || '-'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="py-4 px-4 text-center text-gray-500">No savings records yet</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Savings Goals</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {savingsGoals.length > 0 ? (
+              savingsGoals.map((goal) => (
+                <div key={goal.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="font-semibold">{goal.goal_name}</p>
+                      <p className="text-sm text-gray-600">Target: RM {goal.target_amount.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                      <p className="text-sm text-gray-600">By: {goal.target_date || 'No date set'}</p>
+                      {goal.description && <p className="text-sm text-gray-600 mt-1">{goal.description}</p>}
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs ${goal.status === 'Active' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                      {goal.status}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 py-4 text-center text-gray-500">No savings goals yet</div>
+            )}
+          </div>
+        </div>
+      </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     // if (!user) {
     //   return <LoginPage profiles={profiles} onLogin={setUser} />;
@@ -613,6 +982,10 @@ const NurInvestmentFund = () => {
             setEquitiesCompanies={setEquitiesCompanies}
             assetMonthlyData={assetMonthlyData}
             setAssetMonthlyData={setAssetMonthlyData}
+            savingsRecords={savingsRecords}
+            setSavingsRecords={setSavingsRecords}
+            savingsGoals={savingsGoals}
+            setSavingsGoals={setSavingsGoals}
           />
         );
       case 'profiles':
@@ -637,6 +1010,8 @@ const NurInvestmentFund = () => {
         );
       case 'documents':
         return <DocumentsView />;
+      case 'savings':
+        return <SavingsView />;
       default:
         return (
           <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -727,9 +1102,18 @@ const NurInvestmentFund = () => {
       </header>
 
       <div className="flex">
-        <aside className={`$
-          mobileMenuOpen ? 'block' : 'hidden'
-        } md:${sidebarOpen ? 'block' : 'hidden'} w-64 bg-white border-r min-h-screen fixed md:relative left-0 top-0 z-40 transition-all duration-300`}>
+        {/* Overlay to close sidebar on click - Mobile */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+        
+        <aside 
+          className={`${
+            mobileMenuOpen ? 'block' : 'hidden'
+          } md:block w-64 bg-white border-r min-h-screen fixed md:static left-0 top-16 md:top-0 z-40 transition-all duration-300`}>
           <div className="flex justify-end p-4 md:hidden">
             <button 
               onClick={() => setMobileMenuOpen(false)}
@@ -741,6 +1125,114 @@ const NurInvestmentFund = () => {
           <nav className="p-4 space-y-2 mt-0 md:mt-4">
             {navigation.map((item) => {
               const Icon = item.icon;
+              
+              // Handle grouped items (Financial with submenu)
+              if (item.isGroup) {
+                return (
+                  <div key={item.id} className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setFinancialDropdownOpen(!financialDropdownOpen);
+                      }}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                        item.submenu.some(sub => activeSection === sub.id || (sub.submenu && sub.submenu.some(s => activeSection === s.id)))
+                          ? 'bg-blue-50 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-5 h-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      <span className={`transform transition-transform ${financialDropdownOpen ? 'rotate-180' : ''}`}>
+                        ▼
+                      </span>
+                    </button>
+                    
+                    {/* Dropdown submenu */}
+                    {financialDropdownOpen && (
+                      <div className="pl-2 space-y-1 bg-gray-50 rounded-lg py-1">
+                        {item.submenu.map((subitem) => {
+                          const SubIcon = subitem.icon;
+                          
+                          // Handle nested subgroups (Investment submenu)
+                          if (subitem.isSubGroup) {
+                            return (
+                              <div key={subitem.id} className="space-y-1">
+                                <button
+                                  onClick={() => {
+                                    setInvestmentDropdownOpen(!investmentDropdownOpen);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-3 py-2 rounded transition-colors text-sm ${
+                                    subitem.submenu.some(s => activeSection === s.id)
+                                      ? 'bg-blue-100 text-blue-600 font-medium'
+                                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <SubIcon className="w-4 h-4" />
+                                    <span>{subitem.name}</span>
+                                  </div>
+                                  <span className={`transform transition-transform text-xs ${investmentDropdownOpen ? 'rotate-180' : ''}`}>
+                                    ▼
+                                  </span>
+                                </button>
+                                
+                                {/* Nested submenu */}
+                                {investmentDropdownOpen && (
+                                  <div className="pl-2 space-y-1">
+                                    {subitem.submenu.map((subsubitem) => {
+                                      const SubSubIcon = subsubitem.icon;
+                                      return (
+                                        <button
+                                          key={subsubitem.id}
+                                          onClick={() => {
+                                            setActiveSection(subsubitem.id);
+                                            setMobileMenuOpen(false);
+                                          }}
+                                          className={`w-full flex items-center gap-2 px-3 py-2 rounded transition-colors text-xs ${
+                                            activeSection === subsubitem.id
+                                              ? 'bg-blue-200 text-blue-700 font-medium'
+                                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'
+                                          }`}
+                                        >
+                                          <SubSubIcon className="w-3 h-3" />
+                                          <span>{subsubitem.name}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          
+                          // Regular submenu items
+                          return (
+                            <button
+                              key={subitem.id}
+                              onClick={() => {
+                                setActiveSection(subitem.id);
+                                setMobileMenuOpen(false);
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded transition-colors text-sm ${
+                                activeSection === subitem.id
+                                  ? 'bg-blue-100 text-blue-600 font-medium'
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            >
+                              <SubIcon className="w-4 h-4" />
+                              <span>{subitem.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              
+              // Regular items
               return (
                 <button
                   key={item.id}
@@ -762,9 +1254,11 @@ const NurInvestmentFund = () => {
           </nav>
         </aside>
 
-        <main className="flex-1 p-6 md:p-8">
-          {renderContent()}
-        </main>
+        <div className="flex-1 relative">
+          <main className="p-6 md:p-8">
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </div>
   );

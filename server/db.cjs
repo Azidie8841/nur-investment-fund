@@ -69,6 +69,32 @@ const initializeDb = () => {
     )
   `);
 
+  // Savings Records table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS savings_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      amount REAL NOT NULL,
+      record_date TEXT NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Savings Goals table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS savings_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      goal_name TEXT NOT NULL,
+      target_amount REAL NOT NULL,
+      target_date TEXT,
+      status TEXT DEFAULT 'Active',
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Check if tables have data, if not insert defaults
   const companiesCount = db.prepare('SELECT COUNT(*) as count FROM equities_companies').get().count;
   
@@ -131,6 +157,33 @@ const initializeDb = () => {
     insertUser.run('Family Member', 'family@example.com', 'admin');
     insertUser.run('Investor A', 'investorA@example.com', 'user');
     insertUser.run('Investor B', 'investorB@example.com', 'user');
+  }
+
+  const savingsRecordCount = db.prepare('SELECT COUNT(*) as count FROM savings_records').get().count;
+  
+  if (savingsRecordCount === 0) {
+    const insertRecord = db.prepare(`
+      INSERT INTO savings_records (amount, record_date, notes)
+      VALUES (?, ?, ?)
+    `);
+
+    insertRecord.run(5000, '2025-12-01', 'Monthly savings contribution');
+    insertRecord.run(5000, '2025-11-01', 'Monthly savings contribution');
+    insertRecord.run(5000, '2025-10-01', 'Monthly savings contribution');
+    insertRecord.run(5000, '2025-09-01', 'Monthly savings contribution');
+    insertRecord.run(5000, '2025-08-01', 'Monthly savings contribution');
+  }
+
+  const savingsGoalCount = db.prepare('SELECT COUNT(*) as count FROM savings_goals').get().count;
+  
+  if (savingsGoalCount === 0) {
+    const insertGoal = db.prepare(`
+      INSERT INTO savings_goals (goal_name, target_amount, target_date, status, description)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    insertGoal.run('Primary Goal', 500000, '2031-12-31', 'Active', 'Long-term wealth accumulation');
+    insertGoal.run('Emergency Fund', 50000, '2025-12-31', 'On Track', 'Emergency savings for 6 months');
   }
 };
 
