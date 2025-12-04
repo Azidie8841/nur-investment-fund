@@ -10,6 +10,19 @@ A React-based investment fund management application with admin controls, user p
 - Recent activity tracking
 - Performance metrics
 
+✅ **Financial Tab (NEW)**
+- Organized menu structure with Investment and Savings submenus
+- Dropdown navigation for better UI organization
+- Quick access to financial features
+
+✅ **Investment Submenu**
+- Dashboard
+- Portfolio view
+- Performance tracking
+- All Investments overview
+- Governance
+- Documents
+
 ✅ **Equities Management**
 - View all companies with market values
 - Dynamic value calculation from monthly data
@@ -17,11 +30,30 @@ A React-based investment fund management application with admin controls, user p
 - Click to view detailed asset information
 - Historic investment tracking (2025 data)
 
+✅ **Savings Management (NEW)**
+- Add/Edit/Delete savings records
+- Cash In and Cash Out transaction types
+- Monthly savings chart (Jan-Dec)
+- Yearly savings chart (2025 onwards)
+- Savings goals tracking
+- Emergency fund coverage calculator
+- Motivational status messages
+- PDF export functionality
+
 ✅ **Admin Panel**
 - Add/Edit/Delete companies
 - Edit monthly asset values (Jan-Dec)
+- Add/Edit/Delete savings records
+- Add/Edit/Delete savings goals
 - Decimal value support (e.g., 1,505.59)
 - Real-time data persistence to database
+
+✅ **Charts & Visualizations**
+- Monthly savings chart with cash in/out/cumulative totals
+- Yearly savings chart with aggregated data
+- Asset allocation pie chart
+- Fund performance line chart
+- Responsive Recharts integration
 
 ✅ **All Investments Overview**
 - View all investment segments (Equities, Fixed Income, Real Estate, Renewable Energy)
@@ -39,6 +71,12 @@ A React-based investment fund management application with admin controls, user p
 - RESTful API with Express.js
 - CORS enabled for frontend communication
 - Auto-initialization with seed data
+- Savings records and goals tables
+
+✅ **Sidebar Navigation**
+- Organized menu with nested dropdowns
+- Mobile-friendly overlay menu
+- Fixed sidebar on desktop with content pushed right
 
 ## Tech Stack
 
@@ -48,6 +86,7 @@ A React-based investment fund management application with admin controls, user p
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React
 - **Charts**: Recharts
+- **PDF Export**: jsPDF, html2canvas
 
 ## Project Structure
 
@@ -122,6 +161,17 @@ npm start
 
 **Performance Data:**
 - `GET /api/performance-data` - Get performance metrics
+
+**Savings Records:**
+- `GET /api/savings-records` - List all savings records
+- `POST /api/savings-records` - Add new record (Cash In/Out)
+- `DELETE /api/savings-records/:id` - Delete record
+
+**Savings Goals:**
+- `GET /api/savings-goals` - List all savings goals
+- `POST /api/savings-goals` - Add new goal
+- `PUT /api/savings-goals/:id` - Update goal
+- `DELETE /api/savings-goals/:id` - Delete goal
 
 **User Profiles:**
 - `GET /api/user-profiles` - List all profiles
@@ -209,6 +259,53 @@ taskkill /PID <PID> /F
 rm server/nur_fund.db
 npm run server
 ```
+
+## Changelog
+
+### Version 1.2.0 - December 4, 2025
+
+**New Features:**
+- ✨ **Financial Tab Navigation** - New organized menu structure with Investment and Savings submenus
+- ✨ **Investment Submenu** - Groups Dashboard, Portfolio, Performance, All Investments, Governance, and Documents
+- ✨ **Yearly Savings Chart** - New visualization showing yearly cash in/out/cumulative totals from 2025 onwards
+- ✨ **PDF Export** - Download savings reports as PDF (includes all charts, data, and metrics)
+- ✨ **Sidebar Improvements** - Desktop sidebar now uses static positioning to push content (no overlay)
+
+**Improvements:**
+- 🔧 Organized navigation structure for cleaner UI
+- 🔧 Better menu hierarchy with dropdown submenus
+- 🔧 Improved sidebar display on desktop (content properly positioned)
+- 🔧 Enhanced data visualization with yearly aggregations
+
+**Dependencies Added:**
+- jsPDF (v2.x) - PDF generation
+- html2canvas - DOM to canvas conversion for PDF export
+
+### Version 1.1.0 - Earlier Release
+
+**Features:**
+- Comprehensive Savings Management System
+  - Add/Edit/Delete savings records with Cash In/Out types
+  - Savings goals tracking with target amounts and dates
+  - Monthly savings chart with cash in/out/cumulative totals
+  - Emergency fund coverage calculator (RM 2,561/month basis)
+  - Motivational status messages (6 tiers: 💪 to 🎉)
+  - Emergency fund weeks display
+- Complete Admin Panel for all data management
+- Dashboard with fund performance and allocation views
+- User profile management with role-based access
+- Database persistence with SQLite
+- RESTful API with Express.js
+
+### Version 1.0.0 - Initial Release
+
+**Core Features:**
+- Investment tracking with equities, fixed income, real estate, and renewable energy
+- Company management with market value calculations
+- Asset allocation visualization
+- Performance metrics and charts
+- User management system
+- Admin controls for data management
 
 ## Future Enhancements
 
