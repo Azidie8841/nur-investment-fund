@@ -64,6 +64,55 @@ app.delete('/api/equities-companies/:id', (req, res) => {
   }
 });
 
+// ===== Fixed Income Bonds Routes =====
+app.get('/api/fixed-income-bonds', (req, res) => {
+  try {
+    const bonds = db.prepare('SELECT * FROM fixed_income_bonds ORDER BY id DESC').all();
+    res.json(bonds);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/fixed-income-bonds', (req, res) => {
+  try {
+    const { name, value, bond_type, rating, maturity_date, country } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO fixed_income_bonds (name, value, bond_type, rating, maturity_date, country)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(name, value, bond_type, rating, maturity_date, country);
+    res.json({ id: result.lastInsertRowid, name, value, bond_type, rating, maturity_date, country });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/fixed-income-bonds/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, value, bond_type, rating, maturity_date, country } = req.body;
+    db.prepare(`
+      UPDATE fixed_income_bonds
+      SET name = ?, value = ?, bond_type = ?, rating = ?, maturity_date = ?, country = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(name, value, bond_type, rating, maturity_date, country, id);
+    res.json({ id, name, value, bond_type, rating, maturity_date, country });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/fixed-income-bonds/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM fixed_income_bonds WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ===== Asset Monthly Data Routes =====
 app.get('/api/asset-monthly-data', (req, res) => {
   try {

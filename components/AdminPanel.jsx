@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, updateAssetMonthlyData, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
   setEquitiesCompanies,
+  fixedIncomeBonds,
+  setFixedIncomeBonds,
   assetMonthlyData,
   setAssetMonthlyData,
   savingsRecords,
@@ -36,6 +38,23 @@ export default function AdminPanel({
   const [editSector, setEditSector] = useState('');
   const [editOwnership, setEditOwnership] = useState('');
   const [editCountry, setEditCountry] = useState('');
+
+  // Fixed Income Bond form state
+  const [bName, setBName] = useState('');
+  const [bValue, setBValue] = useState('');
+  const [bType, setBType] = useState('Government');
+  const [bRating, setBRating] = useState('AAA');
+  const [bMaturity, setBMaturity] = useState('');
+  const [bCountry, setBCountry] = useState('');
+
+  // Fixed Income Bond edit state
+  const [editingBond, setEditingBond] = useState(null);
+  const [editBName, setEditBName] = useState('');
+  const [editBValue, setEditBValue] = useState('');
+  const [editBType, setEditBType] = useState('');
+  const [editBRating, setEditBRating] = useState('');
+  const [editBMaturity, setEditBMaturity] = useState('');
+  const [editBCountry, setEditBCountry] = useState('');
 
   // Savings Record form state
   const [recordAmount, setRecordAmount] = useState('');
@@ -365,6 +384,123 @@ export default function AdminPanel({
                   <button
                     className="px-2 py-1 bg-red-500 text-white rounded text-xs"
                     onClick={() => deleteCompany(c)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Add Fixed Income Bond</h3>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!bName || !bValue) return;
+          addFixedIncomeBond({ 
+            name: bName, 
+            value: Number(bValue), 
+            bond_type: bType,
+            rating: bRating,
+            maturity_date: bMaturity,
+            country: bCountry
+          }).then(newBond => {
+            setFixedIncomeBonds((prev) => [newBond, ...prev]);
+            setBName(''); setBValue(''); setBType('Government'); setBRating('AAA'); setBMaturity(''); setBCountry('');
+          }).catch(error => alert('Failed to add bond: ' + error.message));
+        }} className="space-y-2 grid grid-cols-2 gap-2">
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Bond Name" value={bName} onChange={(e)=>setBName(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Value" type="number" value={bValue} onChange={(e)=>setBValue(e.target.value)} />
+          <select className="w-full px-3 py-2 border rounded col-span-1" value={bType} onChange={(e)=>setBType(e.target.value)}>
+            <option>Government</option>
+            <option>Corporate</option>
+            <option>Municipal</option>
+            <option>International</option>
+          </select>
+          <select className="w-full px-3 py-2 border rounded col-span-1" value={bRating} onChange={(e)=>setBRating(e.target.value)}>
+            <option>AAA</option>
+            <option>AA</option>
+            <option>A</option>
+            <option>BBB</option>
+            <option>BB</option>
+            <option>B</option>
+          </select>
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Maturity Date" type="date" value={bMaturity} onChange={(e)=>setBMaturity(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Country" value={bCountry} onChange={(e)=>setBCountry(e.target.value)} />
+          <button className="px-4 py-2 bg-blue-600 text-white rounded col-span-2">Add Bond</button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h4 className="font-semibold mb-4">Fixed Income Bonds</h4>
+        {editingBond ? (
+          <div className="border p-4 rounded space-y-2">
+            <h5 className="font-medium">Edit Bond</h5>
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editBName} onChange={(e)=>setEditBName(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editBValue} onChange={(e)=>setEditBValue(e.target.value)} />
+            <select className="w-full px-3 py-2 border rounded text-sm" value={editBType} onChange={(e)=>setEditBType(e.target.value)}>
+              <option>Government</option>
+              <option>Corporate</option>
+              <option>Municipal</option>
+              <option>International</option>
+            </select>
+            <select className="w-full px-3 py-2 border rounded text-sm" value={editBRating} onChange={(e)=>setEditBRating(e.target.value)}>
+              <option>AAA</option>
+              <option>AA</option>
+              <option>A</option>
+              <option>BBB</option>
+              <option>BB</option>
+              <option>B</option>
+            </select>
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Maturity Date" type="date" value={editBMaturity} onChange={(e)=>setEditBMaturity(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editBCountry} onChange={(e)=>setEditBCountry(e.target.value)} />
+            <div className="flex gap-2">
+              <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={() => {
+                updateFixedIncomeBond(editingBond.id, {
+                  name: editBName,
+                  value: Number(editBValue),
+                  bond_type: editBType,
+                  rating: editBRating,
+                  maturity_date: editBMaturity,
+                  country: editBCountry
+                }).then(updated => {
+                  setFixedIncomeBonds(prev => prev.map(b => b.id === editingBond.id ? updated : b));
+                  setEditingBond(null);
+                }).catch(error => alert('Failed to update: ' + error.message));
+              }}>Save</button>
+              <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={() => setEditingBond(null)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {fixedIncomeBonds.map((b, i) => (
+              <li key={i} className="border p-2 rounded flex items-center justify-between">
+                <span>{b.name} — {b.bond_type} ({b.rating}) — {b.country}</span>
+                <div className="flex gap-1">
+                  <button
+                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                    onClick={() => {
+                      setEditingBond(b);
+                      setEditBName(b.name);
+                      setEditBValue(b.value);
+                      setEditBType(b.bond_type);
+                      setEditBRating(b.rating);
+                      setEditBMaturity(b.maturity_date || '');
+                      setEditBCountry(b.country || '');
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                    onClick={() => {
+                      deleteFixedIncomeBond(b.id).then(() => {
+                        setFixedIncomeBonds(prev => prev.filter(x => x.id !== b.id));
+                        alert('Bond deleted successfully');
+                      }).catch(error => alert('Failed to delete: ' + error.message));
+                    }}
                   >
                     Delete
                   </button>

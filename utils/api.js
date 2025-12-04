@@ -68,6 +68,65 @@ export const deleteEquitiesCompany = async (id) => {
   }
 };
 
+// Fixed Income Bonds
+export const fetchFixedIncomeBonds = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-bonds`);
+    const data = await handleResponse(res);
+    console.log('Fetched fixed income bonds:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching fixed income bonds:', error);
+    throw error;
+  }
+};
+
+export const addFixedIncomeBond = async (bond) => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-bonds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bond)
+    });
+    const data = await handleResponse(res);
+    console.log('Added fixed income bond:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding fixed income bond:', error);
+    throw error;
+  }
+};
+
+export const updateFixedIncomeBond = async (id, bond) => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-bonds/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bond)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated fixed income bond:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating fixed income bond:', error);
+    throw error;
+  }
+};
+
+export const deleteFixedIncomeBond = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-bonds/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted fixed income bond:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting fixed income bond:', error);
+    throw error;
+  }
+};
+
 // Asset Monthly Data
 export const fetchAssetMonthlyData = async () => {
   try {

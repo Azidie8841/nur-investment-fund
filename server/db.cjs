@@ -21,6 +21,21 @@ const initializeDb = () => {
     )
   `);
 
+  // Fixed Income Bonds table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS fixed_income_bonds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      value REAL NOT NULL,
+      bond_type TEXT,
+      rating TEXT,
+      maturity_date TEXT,
+      country TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Asset Monthly Data table
   db.exec(`
     CREATE TABLE IF NOT EXISTS asset_monthly_data (

@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -21,6 +21,7 @@ const NurInvestmentFund = () => {
 
   // State for data from API
   const [equitiesCompanies, setEquitiesCompanies] = useState([]);
+  const [fixedIncomeBonds, setFixedIncomeBonds] = useState([]);
   const [assetMonthlyData, setAssetMonthlyData] = useState({});
   const [profiles, setProfiles] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
@@ -34,8 +35,9 @@ const NurInvestmentFund = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [companies, monthlyData, perfData, userProfiles, records, goals] = await Promise.all([
+        const [companies, bonds, monthlyData, perfData, userProfiles, records, goals] = await Promise.all([
           fetchEquitiesCompanies(),
+          fetchFixedIncomeBonds(),
           fetchAssetMonthlyData(),
           fetchPerformanceData(),
           fetchUserProfiles(),
@@ -44,6 +46,7 @@ const NurInvestmentFund = () => {
         ]);
         
         setEquitiesCompanies(companies);
+        setFixedIncomeBonds(bonds);
         setAssetMonthlyData(monthlyData);
         setPerformanceData(perfData.map(p => ({ month: p.month, value: p.value })));
         setProfiles(userProfiles);
@@ -980,6 +983,8 @@ const NurInvestmentFund = () => {
           <AdminPanel
             equitiesCompanies={equitiesCompanies}
             setEquitiesCompanies={setEquitiesCompanies}
+            fixedIncomeBonds={fixedIncomeBonds}
+            setFixedIncomeBonds={setFixedIncomeBonds}
             assetMonthlyData={assetMonthlyData}
             setAssetMonthlyData={setAssetMonthlyData}
             savingsRecords={savingsRecords}
