@@ -29,6 +29,30 @@ A React-based investment fund management application with admin controls, user p
 - Country and sector information
 - Click to view detailed asset information
 - Historic investment tracking (2025 data)
+- Values track from inside monthly database records
+
+✅ **Fixed Income Management (Enhanced)**
+- View fixed income bonds with ratings and maturity dates
+- Value tracking from monthly database records (not static base values)
+- Bond type, rating, and country information
+- Monthly value entry and tracking
+- Dynamic card value updates based on most recent monthly data
+
+✅ **Alternative Investments (Enhanced)**
+- Asset type categorization (Crypto, Real Estate, etc.)
+- Platform information tracking
+- Unit price and quantity tracking
+- Values track from inside database (current_value field)
+- Dynamic portfolio percentage calculations
+
+✅ **Investment Card Improvements**
+- All investment cards now track inside values from monthly/database data
+- Equities: Calculates from monthly company values (base currency × 3.7 conversion)
+- Fixed Income: Calculates from monthly bond values (base currency × 3.7 conversion)
+- Alternative Investments: Tracks current_value directly (already in RM)
+- Cash & Cash Equivalents: Tracks from savings records (already in RM)
+- Dynamic percentage bars reflect actual portfolio allocation
+- Real-time updates when data is modified
 
 ✅ **Savings Management (NEW)**
 - Add/Edit/Delete savings records
@@ -39,6 +63,15 @@ A React-based investment fund management application with admin controls, user p
 - Emergency fund coverage calculator
 - Motivational status messages
 - PDF export functionality
+
+✅ **Cash & Cash Equivalents (NEW - Enhanced)**
+- Full CRUD operations (Create, Read, Update, Delete) for cash records
+- Instrument Type field (e.g., Cash, Money Market, Savings Account)
+- Platform field (e.g., bank name, exchange name)
+- Current Balance tracking in RM
+- Dynamic value calculation from database records
+- Real-time portfolio percentage updates
+- Inline edit/delete functionality with save/cancel options
 
 ✅ **Admin Panel**
 - Add/Edit/Delete companies
@@ -264,6 +297,35 @@ npm run server
 
 ### Version 1.2.0 - December 4, 2025
 
+## Changelog
+
+### Version 1.2.0 - Current Release (December 5, 2025)
+
+**New Features:**
+- ✨ **Cash Records Management** - Full CRUD operations for cash equivalents with Instrument Type and Platform fields
+- ✨ **Investment Card Value Tracking** - All investment cards now display values from inside (monthly/database data, not static base values)
+- ✨ **Dynamic Portfolio Percentages** - Real-time percentage bar updates based on actual investment values
+- ✨ **Enhanced Cash Table** - New table layout showing Instrument Type, Platform, and Current Balance with edit/delete actions
+
+**Improvements:**
+- 🔧 Fixed Income card now calculates value from monthly bond data (using base currency × 3.7 conversion)
+- 🔧 Equities card calculates from most recent monthly company values
+- 🔧 Alternative Investments displays values directly from current_value field
+- 🔧 Cash & Cash Equivalents card shows total from savings records
+- 🔧 Database schema enhanced with instrument_type and platform fields for cash records
+- 🔧 API endpoints updated to support edit/update operations for cash records
+- 🔧 Improved UI consistency across all investment detail views
+
+**Database Changes:**
+- Added `instrument_type` column to savings_records table (default: "Cash")
+- Added `platform` column to savings_records table
+
+**API Endpoints Added:**
+- `PUT /api/savings-records/:id` - Update cash record with new fields
+- Enhanced `POST /api/savings-records` - Now accepts instrument_type and platform
+
+### Version 1.1.0 - Previous Release
+
 **New Features:**
 - ✨ **Financial Tab Navigation** - New organized menu structure with Investment and Savings submenus
 - ✨ **Investment Submenu** - Groups Dashboard, Portfolio, Performance, All Investments, Governance, and Documents
@@ -281,7 +343,7 @@ npm run server
 - jsPDF (v2.x) - PDF generation
 - html2canvas - DOM to canvas conversion for PDF export
 
-### Version 1.1.0 - Earlier Release
+### Version 1.0.0 - Earlier Release
 
 **Features:**
 - Comprehensive Savings Management System
@@ -292,6 +354,7 @@ npm run server
   - Motivational status messages (6 tiers: 💪 to 🎉)
   - Emergency fund weeks display
 - Complete Admin Panel for all data management
+
 - Dashboard with fund performance and allocation views
 - User profile management with role-based access
 - Database persistence with SQLite
