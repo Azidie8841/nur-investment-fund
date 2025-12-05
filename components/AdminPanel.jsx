@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals } from '../utils/api';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
@@ -8,10 +8,14 @@ export default function AdminPanel({
   setFixedIncomeBonds,
   assetMonthlyData,
   setAssetMonthlyData,
+  fixedIncomeMonthlyData,
+  setFixedIncomeMonthlyData,
   savingsRecords,
   setSavingsRecords,
   savingsGoals,
   setSavingsGoals,
+  alternativeInvestments,
+  setAlternativeInvestments,
 }) {
   // holdings form state
   const [hName, setHName] = useState('');
@@ -74,6 +78,14 @@ export default function AdminPanel({
   const [editGoalAmount, setEditGoalAmount] = useState('');
   const [editGoalDate, setEditGoalDate] = useState('');
   const [editGoalDescription, setEditGoalDescription] = useState('');
+
+  // Alternative Investment form state
+  const [altName, setAltName] = useState('');
+  const [altType, setAltType] = useState('crypto');
+  const [altValue, setAltValue] = useState('');
+  const [altQuantity, setAltQuantity] = useState('');
+  const [altUnit, setAltUnit] = useState('');
+  const [altNotes, setAltNotes] = useState('');
 
   // simple helpers
   const addCompany = async (e) => {
@@ -145,9 +157,15 @@ export default function AdminPanel({
   const [selectedAssetForEdit, setSelectedAssetForEdit] = useState(null);
   const [monthlyValues, setMonthlyValues] = useState({});
 
+  // Monthly dividend edit state
+  const [selectedBondForDividendEdit, setSelectedBondForDividendEdit] = useState(null);
+  const [monthlyDividends, setMonthlyDividends] = useState({});
+
   const startEditMonthly = (assetName) => {
     setSelectedAssetForEdit(assetName);
-    setMonthlyValues(assetMonthlyData[assetName] || {});
+    // Initialize with existing data or empty object
+    const existingData = assetMonthlyData[assetName] || {};
+    setMonthlyValues({...existingData});
   };
 
   const saveMonthlyValues = async () => {
@@ -160,6 +178,83 @@ export default function AdminPanel({
       setSelectedAssetForEdit(null);
     } catch (error) {
       alert('Failed to save monthly values: ' + error.message);
+    }
+  };
+
+  const startEditBondDividends = (bondName, currentDividends = {}) => {
+    setSelectedBondForDividendEdit(bondName);
+    setMonthlyDividends(currentDividends);
+  };
+
+  const saveBondMonthlyDividends = async () => {
+    try {
+      await updateBondMonthlyDividends(selectedBondForDividendEdit, monthlyDividends);
+      setSelectedBondForDividendEdit(null);
+      setMonthlyDividends({});
+      alert('Bond monthly dividends saved');
+    } catch (error) {
+      alert('Failed to save bond dividends: ' + error.message);
+    }
+  };
+
+  // Monthly Bond Values handlers
+  const [selectedBondForValueEdit, setSelectedBondForValueEdit] = React.useState(null);
+  const [monthlyBondValues, setMonthlyBondValues] = React.useState({});
+
+  const startEditBondValues = (bondName, currentValues = {}) => {
+    setSelectedBondForValueEdit(bondName);
+    setMonthlyBondValues(currentValues);
+  };
+
+  const saveBondMonthlyValues = async () => {
+    try {
+      await updateBondMonthlyValues(selectedBondForValueEdit, monthlyBondValues);
+      setSelectedBondForValueEdit(null);
+      setMonthlyBondValues({});
+      alert('Bond monthly values saved');
+    } catch (error) {
+      alert('Failed to save bond values: ' + error.message);
+    }
+  };
+
+  // Backup handlers
+  const [backups, setBackups] = React.useState([]);
+  const [showBackups, setShowBackups] = React.useState(false);
+
+  const handleCreateBackup = async () => {
+    try {
+      await createDatabaseBackup();
+      alert('Database backup created successfully');
+      loadBackups();
+    } catch (error) {
+      alert('Failed to create backup: ' + error.message);
+    }
+  };
+
+  const loadBackups = async () => {
+    try {
+      const backupList = await listDatabaseBackups();
+      setBackups(backupList);
+    } catch (error) {
+      console.error('Failed to load backups:', error);
+      setBackups([]);
+    }
+  };
+
+  const handleRestoreBackup = async (backupName) => {
+    if (window.confirm(`Restore database from ${backupName}? This will replace all current data.`)) {
+      try {
+        await restoreDatabaseBackup(backupName);
+        alert('Database restored successfully. Server is restarting...');
+        
+        // Wait 3 seconds for server to restart after process.exit(0)
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+        
+      } catch (error) {
+        alert('Failed to restore backup: ' + error.message);
+      }
     }
   };
 
@@ -338,6 +433,115 @@ export default function AdminPanel({
     }
   };
 
+  // Fixed Income Bond handlers
+  const addBond = async (e) => {
+    e.preventDefault();
+    if (!bName || !bValue) return;
+    try {
+      const newBond = await addFixedIncomeBond({ 
+        name: bName, 
+        value: Number(bValue) / 3.7,
+        bond_type: bType,
+        rating: bRating,
+        maturity_date: bMaturity,
+        country: bCountry
+      });
+      setFixedIncomeBonds((prev) => [newBond, ...prev]);
+      setBName(''); setBValue(''); setBType('Government'); setBRating('AAA'); setBMaturity(''); setBCountry('');
+    } catch (error) {
+      alert('Failed to add bond: ' + error.message);
+    }
+  };
+
+  const deleteBond = async (bond) => {
+    if (!window.confirm(`Delete bond "${bond.name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteFixedIncomeBond(bond.id);
+      setFixedIncomeBonds((prev) => prev.filter((b) => b.id !== bond.id));
+    } catch (error) {
+      alert('Failed to delete bond: ' + error.message);
+    }
+  };
+
+  const startEditBond = (bond) => {
+    setEditingBond(bond);
+    setEditBName(bond.name);
+    setEditBValue(bond.value * 3.7);
+    setEditBType(bond.bond_type);
+    setEditBRating(bond.rating);
+    setEditBMaturity(bond.maturity_date || '');
+    setEditBCountry(bond.country || '');
+  };
+
+  const saveBondEdit = async () => {
+    if (!editBName || editBValue === '') {
+      alert('Name and Value are required');
+      return;
+    }
+    try {
+      const updated = await updateFixedIncomeBond(editingBond.id, {
+        name: editBName,
+        value: Number(editBValue) / 3.7,
+        bond_type: editBType,
+        rating: editBRating,
+        maturity_date: editBMaturity,
+        country: editBCountry
+      });
+      setFixedIncomeBonds((prev) =>
+        prev.map((b) =>
+          b.id === editingBond.id ? updated : b
+        )
+      );
+      setEditingBond(null);
+    } catch (error) {
+      alert('Failed to update bond: ' + error.message);
+    }
+  };
+
+  const cancelEditBond = () => {
+    setEditingBond(null);
+  };
+
+  // Alternative Investment handlers
+  const handleAddAlternativeInvestment = async (e) => {
+    e.preventDefault();
+    const value = parseFloat(altValue);
+    if (!altName || !value || value <= 0) {
+      alert('Please fill in all required fields with valid values');
+      return;
+    }
+    try {
+      const newInvestment = await addAlternativeInvestment({
+        name: altName,
+        asset_type: altType,
+        current_value: value,
+        quantity: altQuantity ? parseFloat(altQuantity) : null,
+        unit: altUnit || null,
+        notes: altNotes || null
+      });
+      setAlternativeInvestments((prev) => [newInvestment, ...prev]);
+      setAltName('');
+      setAltValue('');
+      setAltQuantity('');
+      setAltUnit('');
+      setAltNotes('');
+      alert('Alternative investment added successfully');
+    } catch (error) {
+      alert('Error adding investment: ' + error.message);
+    }
+  };
+
+  const handleDeleteAlternativeInvestment = async (id) => {
+    if (!window.confirm('Delete this alternative investment?')) return;
+    try {
+      await deleteAlternativeInvestment(id);
+      setAlternativeInvestments((prev) => prev.filter((inv) => inv.id !== id));
+      alert('Investment deleted');
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Admin Panel</h2>
@@ -396,23 +600,9 @@ export default function AdminPanel({
 
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="font-semibold mb-4">Add Fixed Income Bond</h3>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (!bName || !bValue) return;
-          addFixedIncomeBond({ 
-            name: bName, 
-            value: Number(bValue), 
-            bond_type: bType,
-            rating: bRating,
-            maturity_date: bMaturity,
-            country: bCountry
-          }).then(newBond => {
-            setFixedIncomeBonds((prev) => [newBond, ...prev]);
-            setBName(''); setBValue(''); setBType('Government'); setBRating('AAA'); setBMaturity(''); setBCountry('');
-          }).catch(error => alert('Failed to add bond: ' + error.message));
-        }} className="space-y-2 grid grid-cols-2 gap-2">
+        <form onSubmit={addBond} className="space-y-2 grid grid-cols-2 gap-2">
           <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Bond Name" value={bName} onChange={(e)=>setBName(e.target.value)} />
-          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Value" type="number" value={bValue} onChange={(e)=>setBValue(e.target.value)} />
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Value (RM)" type="number" step="0.01" value={bValue} onChange={(e)=>setBValue(e.target.value)} />
           <select className="w-full px-3 py-2 border rounded col-span-1" value={bType} onChange={(e)=>setBType(e.target.value)}>
             <option>Government</option>
             <option>Corporate</option>
@@ -439,7 +629,7 @@ export default function AdminPanel({
           <div className="border p-4 rounded space-y-2">
             <h5 className="font-medium">Edit Bond</h5>
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editBName} onChange={(e)=>setEditBName(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editBValue} onChange={(e)=>setEditBValue(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value (RM)" type="number" step="0.01" value={editBValue} onChange={(e)=>setEditBValue(e.target.value)} />
             <select className="w-full px-3 py-2 border rounded text-sm" value={editBType} onChange={(e)=>setEditBType(e.target.value)}>
               <option>Government</option>
               <option>Corporate</option>
@@ -457,20 +647,8 @@ export default function AdminPanel({
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Maturity Date" type="date" value={editBMaturity} onChange={(e)=>setEditBMaturity(e.target.value)} />
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editBCountry} onChange={(e)=>setEditBCountry(e.target.value)} />
             <div className="flex gap-2">
-              <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={() => {
-                updateFixedIncomeBond(editingBond.id, {
-                  name: editBName,
-                  value: Number(editBValue),
-                  bond_type: editBType,
-                  rating: editBRating,
-                  maturity_date: editBMaturity,
-                  country: editBCountry
-                }).then(updated => {
-                  setFixedIncomeBonds(prev => prev.map(b => b.id === editingBond.id ? updated : b));
-                  setEditingBond(null);
-                }).catch(error => alert('Failed to update: ' + error.message));
-              }}>Save</button>
-              <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={() => setEditingBond(null)}>Cancel</button>
+              <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveBondEdit}>Save</button>
+              <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={cancelEditBond}>Cancel</button>
             </div>
           </div>
         ) : (
@@ -481,26 +659,13 @@ export default function AdminPanel({
                 <div className="flex gap-1">
                   <button
                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                    onClick={() => {
-                      setEditingBond(b);
-                      setEditBName(b.name);
-                      setEditBValue(b.value);
-                      setEditBType(b.bond_type);
-                      setEditBRating(b.rating);
-                      setEditBMaturity(b.maturity_date || '');
-                      setEditBCountry(b.country || '');
-                    }}
+                    onClick={() => startEditBond(b)}
                   >
                     Edit
                   </button>
                   <button
                     className="px-2 py-1 bg-red-500 text-white rounded text-xs"
-                    onClick={() => {
-                      deleteFixedIncomeBond(b.id).then(() => {
-                        setFixedIncomeBonds(prev => prev.filter(x => x.id !== b.id));
-                        alert('Bond deleted successfully');
-                      }).catch(error => alert('Failed to delete: ' + error.message));
-                    }}
+                    onClick={() => deleteBond(b)}
                   >
                     Delete
                   </button>
@@ -512,23 +677,25 @@ export default function AdminPanel({
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="font-semibold mb-4">Edit Asset Monthly Values</h3>
-        {selectedAssetForEdit ? (
+        <h3 className="font-semibold mb-4">Edit Monthly Values</h3>
+        {selectedAssetForEdit && (equitiesCompanies.find(c => c.name === selectedAssetForEdit) || fixedIncomeBonds.find(b => b.name === selectedAssetForEdit)) ? (
           <div className="space-y-3">
-            <h4 className="font-medium">Edit {selectedAssetForEdit}</h4>
+            <h4 className="font-medium">Edit {selectedAssetForEdit} (Equities)</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((month) => (
                 <div key={month}>
                   <label className="text-xs text-gray-600 capitalize">{month}</label>
                   <input
                     className="w-full px-2 py-1 border rounded text-sm"
-                    type="number"
-                    step="0.01"
-                    placeholder="Enter value in RM"
-                    value={monthlyValues[month] ? (monthlyValues[month] * 3.7).toFixed(2) : ''}
+                    type="text"
+                    placeholder="Enter value (e.g., 1,514.87 or 1514.87)"
+                    value={monthlyValues[month] !== undefined && monthlyValues[month] !== null ? (monthlyValues[month] * 3.7).toFixed(2) : ''}
                     onChange={(e) => {
-                      const rmValue = parseFloat(e.target.value) || 0;
-                      setMonthlyValues((prev) => ({ ...prev, [month]: rmValue / 3.7 }));
+                      const input = e.target.value;
+                      // Remove commas and parse
+                      const cleanValue = input.replace(/,/g, '');
+                      const rmValue = cleanValue === '' ? undefined : (parseFloat(cleanValue) || 0);
+                      setMonthlyValues((prev) => ({ ...prev, [month]: rmValue !== undefined ? rmValue / 3.7 : undefined }));
                     }}
                   />
                 </div>
@@ -558,8 +725,60 @@ export default function AdminPanel({
               </button>
             </div>
           </div>
-        ) : (
+        ) : null}
+        {selectedAssetForEdit && (fixedIncomeBonds.find(b => b.name === selectedAssetForEdit) || alternativeInvestments.find(a => a.name === selectedAssetForEdit)) ? (
+          <div className="space-y-3">
+            <h4 className="font-medium">Edit {selectedAssetForEdit} (Fixed Income)</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((month) => (
+                <div key={month}>
+                  <label className="text-xs text-gray-600 capitalize">{month}</label>
+                  <input
+                    className="w-full px-2 py-1 border rounded text-sm"
+                    type="text"
+                    placeholder="Enter value (e.g., 1,514.87 or 1514.87)"
+                    value={monthlyValues[month] !== undefined && monthlyValues[month] !== null ? (monthlyValues[month] * 3.7).toFixed(2) : ''}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      // Remove commas and parse
+                      const cleanValue = input.replace(/,/g, '');
+                      const rmValue = cleanValue === '' ? undefined : (parseFloat(cleanValue) || 0);
+                      setMonthlyValues((prev) => ({ ...prev, [month]: rmValue !== undefined ? rmValue / 3.7 : undefined }));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded"
+                onClick={() => {
+                  updateFixedIncomeMonthlyData(selectedAssetForEdit, monthlyValues).then(() => {
+                    // Call the prop function to update parent state
+                    setFixedIncomeMonthlyData((prev) => ({
+                      ...prev,
+                      [selectedAssetForEdit]: monthlyValues
+                    }));
+                    setSelectedAssetForEdit(null);
+                    setMonthlyValues({});
+                    alert('Fixed income monthly values saved');
+                  }).catch(error => alert('Failed to save: ' + error.message));
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={() => setSelectedAssetForEdit(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {!selectedAssetForEdit && (
           <div className="space-y-2">
+            <h4 className="font-medium mb-3">Equities</h4>
             {equitiesCompanies.map((asset, idx) => (
               <button
                 key={idx}
@@ -568,6 +787,140 @@ export default function AdminPanel({
               >
                 <span>{asset.name}</span>
                 <span className="px-2 py-1 bg-blue-500 text-white rounded text-xs">Edit Monthly</span>
+              </button>
+            ))}
+            <h4 className="font-medium mt-4 mb-3">Fixed Income</h4>
+            {fixedIncomeBonds.map((asset, idx) => (
+              <button
+                key={idx}
+                className="w-full text-left p-3 border rounded hover:bg-gray-50 flex justify-between items-center"
+                onClick={() => {
+                  setSelectedAssetForEdit(asset.name);
+                  setMonthlyValues(fixedIncomeMonthlyData[asset.name] || {});
+                }}
+              >
+                <span>{asset.name}</span>
+                <span className="px-2 py-1 bg-green-600 text-white rounded text-xs">Edit Monthly</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bond Monthly Dividends Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Bond Monthly Dividends</h3>
+        {selectedBondForDividendEdit ? (
+          <div className="space-y-4">
+            <h4 className="font-medium">Edit Monthly Dividends - {selectedBondForDividendEdit}</h4>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((month) => (
+                <div key={month}>
+                  <label className="text-xs text-gray-600 capitalize">{month}</label>
+                  <input
+                    className="w-full px-2 py-1 border rounded text-sm"
+                    type="text"
+                    placeholder="Enter value (e.g., 1,514.87 or 1514.87)"
+                    value={monthlyDividends[month] !== undefined && monthlyDividends[month] !== null ? (monthlyDividends[month] * 3.7).toFixed(2) : ''}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      const cleanValue = input.replace(/,/g, '');
+                      const rmValue = cleanValue === '' ? undefined : (parseFloat(cleanValue) || 0);
+                      setMonthlyDividends((prev) => ({ ...prev, [month]: rmValue !== undefined ? rmValue / 3.7 : undefined }));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded"
+                onClick={saveBondMonthlyDividends}
+              >
+                Save Dividends
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={() => {
+                  setSelectedBondForDividendEdit(null);
+                  setMonthlyDividends({});
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600 mb-3">Select a bond to add monthly dividend tracking:</p>
+            {fixedIncomeBonds.map((bond, idx) => (
+              <button
+                key={idx}
+                className="w-full text-left p-3 border rounded hover:bg-orange-50 flex justify-between items-center"
+                onClick={() => startEditBondDividends(bond.name, {})}
+              >
+                <span>{bond.name}</span>
+                <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs">Add Dividends</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bond Monthly Values Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Bond Monthly Values</h3>
+        {selectedBondForValueEdit ? (
+          <div className="space-y-4">
+            <h4 className="font-medium">Edit Monthly Bond Values - {selectedBondForValueEdit}</h4>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((month) => (
+                <div key={month}>
+                  <label className="text-xs text-gray-600 capitalize">{month}</label>
+                  <input
+                    className="w-full px-2 py-1 border rounded text-sm"
+                    type="text"
+                    placeholder="Enter value (e.g., 1,514.87 or 1514.87)"
+                    value={monthlyBondValues[month] !== undefined && monthlyBondValues[month] !== null ? (monthlyBondValues[month] * 3.7).toFixed(2) : ''}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      const cleanValue = input.replace(/,/g, '');
+                      const rmValue = cleanValue === '' ? undefined : (parseFloat(cleanValue) || 0);
+                      setMonthlyBondValues((prev) => ({ ...prev, [month]: rmValue !== undefined ? rmValue / 3.7 : undefined }));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded"
+                onClick={saveBondMonthlyValues}
+              >
+                Save Values
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={() => {
+                  setSelectedBondForValueEdit(null);
+                  setMonthlyBondValues({});
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600 mb-3">Track bond market value changes each month:</p>
+            {fixedIncomeBonds.map((bond, idx) => (
+              <button
+                key={idx}
+                className="w-full text-left p-3 border rounded hover:bg-indigo-50 flex justify-between items-center"
+                onClick={() => startEditBondValues(bond.name, {})}
+              >
+                <span>{bond.name}</span>
+                <span className="px-2 py-1 bg-indigo-500 text-white rounded text-xs">Add Monthly Values</span>
               </button>
             ))}
           </div>
@@ -780,6 +1133,176 @@ export default function AdminPanel({
           ) : (
             <div className="col-span-2 py-4 text-center text-gray-500">No savings goals</div>
           )}
+        </div>
+      </div>
+
+      {/* Database Backup Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">🛡️ Database Backup & Recovery</h3>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">Automatically backup your data to prevent loss. Only stored locally on your computer.</p>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreateBackup}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              💾 Create Backup Now
+            </button>
+            <button
+              onClick={() => {
+                setShowBackups(!showBackups);
+                if (!showBackups) loadBackups();
+              }}
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              📋 View Backups ({backups.length})
+            </button>
+          </div>
+
+          {showBackups && (
+            <div className="bg-gray-50 rounded p-4 max-h-64 overflow-y-auto">
+              {backups.length > 0 ? (
+                <div className="space-y-2">
+                  {backups.map((backup, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border">
+                      <div className="text-sm">
+                        <p className="font-medium">{backup.name}</p>
+                        <p className="text-xs text-gray-500">{backup.date}</p>
+                      </div>
+                      <button
+                        onClick={() => handleRestoreBackup(backup.name)}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-4">No backups available yet</p>
+              )}
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+            <p className="font-medium text-blue-900 mb-1">💡 Best Practices:</p>
+            <ul className="text-blue-800 text-xs space-y-1 list-disc list-inside">
+              <li>Create backups regularly (daily recommended)</li>
+              <li>Keep last 10 backups automatically</li>
+              <li>Backups are stored securely on your computer only</li>
+              <li>No data is shared or uploaded anywhere</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Alternative Investments Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Add Alternative Investment</h3>
+        <div className="space-y-2 grid grid-cols-4 gap-2">
+          <input 
+            type="text" 
+            placeholder="Asset Name (e.g., Bitcoin, Gold)" 
+            value={altName}
+            onChange={(e) => setAltName(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <select 
+            value={altType}
+            onChange={(e) => setAltType(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1 bg-white"
+          >
+            <option value="crypto">Cryptocurrency</option>
+            <option value="gold">Gold</option>
+            <option value="silver">Silver</option>
+            <option value="real-estate">Real Estate</option>
+            <option value="collectibles">Collectibles</option>
+            <option value="other">Other</option>
+          </select>
+          <input 
+            type="number" 
+            step="0.01"
+            placeholder="Current Value (RM)" 
+            value={altValue}
+            onChange={(e) => setAltValue(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="text" 
+            placeholder="Unit (e.g., coins, oz)" 
+            value={altUnit}
+            onChange={(e) => setAltUnit(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="number" 
+            step="0.01"
+            placeholder="Quantity" 
+            value={altQuantity}
+            onChange={(e) => setAltQuantity(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-1" 
+          />
+          <input 
+            type="text" 
+            placeholder="Notes" 
+            value={altNotes}
+            onChange={(e) => setAltNotes(e.target.value)}
+            className="w-full px-3 py-2 border rounded col-span-3" 
+          />
+          <button 
+            onClick={handleAddAlternativeInvestment}
+            className="px-4 py-2 bg-blue-600 text-white rounded col-span-4"
+          >
+            Add Investment
+          </button>
+        </div>
+
+        <h4 className="font-semibold mt-6 mb-3">Alternative Investments</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left py-2 px-3">Asset Name</th>
+                <th className="text-left py-2 px-3">Type</th>
+                <th className="text-left py-2 px-3">Quantity</th>
+                <th className="text-right py-2 px-3">Value (RM)</th>
+                <th className="text-left py-2 px-3">Notes</th>
+                <th className="text-center py-2 px-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alternativeInvestments && alternativeInvestments.length > 0 ? (
+                alternativeInvestments.map((inv) => (
+                  <tr key={inv.id} className="border-t hover:bg-gray-50">
+                    <td className="py-2 px-3">{inv.name}</td>
+                    <td className="py-2 px-3">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium capitalize">
+                        {inv.asset_type}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3">{inv.quantity ? `${inv.quantity} ${inv.unit}` : '-'}</td>
+                    <td className="py-2 px-3 text-right font-medium">
+                      {inv.current_value.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                    <td className="py-2 px-3 text-gray-600 text-xs">{inv.notes || '-'}</td>
+                    <td className="py-2 px-3 text-center">
+                      <button 
+                        onClick={() => handleDeleteAlternativeInvestment(inv.id)}
+                        className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-4 px-3 text-center text-gray-500">No alternative investments</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

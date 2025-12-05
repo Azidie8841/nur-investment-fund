@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { db, initializeDb } = require('./db.cjs');
+const { createBackup, listBackups, restoreBackup, cleanOldBackups } = require('./backup.cjs');
 
 const app = express();
 const PORT = 5000;
@@ -240,13 +241,29 @@ app.get('/api/savings-records', (req, res) => {
 
 app.post('/api/savings-records', (req, res) => {
   try {
-    const { amount, record_date, notes } = req.body;
+    const { amount, record_date, notes, instrument_type, platform } = req.body;
     const stmt = db.prepare(`
-      INSERT INTO savings_records (amount, record_date, notes)
-      VALUES (?, ?, ?)
+      INSERT INTO savings_records (amount, record_date, notes, instrument_type, platform)
+      VALUES (?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(amount, record_date, notes);
-    res.json({ id: result.lastInsertRowid, amount, record_date, notes });
+    const result = stmt.run(amount, record_date, notes, instrument_type || 'Cash', platform || null);
+    res.json({ id: result.lastInsertRowid, amount, record_date, notes, instrument_type, platform });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/savings-records/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, record_date, notes, instrument_type, platform } = req.body;
+    const stmt = db.prepare(`
+      UPDATE savings_records 
+      SET amount = ?, record_date = ?, notes = ?, instrument_type = ?, platform = ?
+      WHERE id = ?
+    `);
+    stmt.run(amount, record_date || new Date().toISOString(), notes || null, instrument_type || 'Cash', platform || null, id);
+    res.json({ success: true, id, amount, record_date, notes, instrument_type, platform });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -305,6 +322,336 @@ app.delete('/api/savings-goals/:id', (req, res) => {
     const { id } = req.params;
     db.prepare('DELETE FROM savings_goals WHERE id = ?').run(id);
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Fixed Income Monthly Data Routes =====
+app.get('/api/fixed-income-monthly-data', (req, res) => {
+  try {
+    const data = db.prepare('SELECT * FROM fixed_income_monthly_data ORDER BY asset_name').all();
+    // Convert to object format { assetName: { jan, feb, ... } }
+    const result = {};
+    data.forEach(row => {
+      result[row.asset_name] = {
+        jan: row.jan,
+        feb: row.feb,
+        mar: row.mar,
+        apr: row.apr,
+        may: row.may,
+        jun: row.jun,
+        jul: row.jul,
+        aug: row.aug,
+        sep: row.sep,
+        oct: row.oct,
+        nov: row.nov,
+        dec: row.dec
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/fixed-income-monthly-data/:assetName', (req, res) => {
+  try {
+    const { assetName } = req.params;
+    const { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec } = req.body;
+    
+    // Check if exists
+    const existing = db.prepare('SELECT id FROM fixed_income_monthly_data WHERE asset_name = ?').get(assetName);
+    
+    if (existing) {
+      db.prepare(`
+        UPDATE fixed_income_monthly_data
+        SET jan = ?, feb = ?, mar = ?, apr = ?, may = ?, jun = ?, jul = ?, aug = ?, sep = ?, oct = ?, nov = ?, dec = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE asset_name = ?
+      `).run(jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, assetName);
+    } else {
+      db.prepare(`
+        INSERT INTO fixed_income_monthly_data (asset_name, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(assetName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec);
+    }
+    
+    res.json({ asset_name: assetName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bond Annual Dividends endpoints
+app.get('/api/bond-dividends/:bondName', (req, res) => {
+  try {
+    const { bondName } = req.params;
+    const data = db.prepare('SELECT * FROM bond_annual_dividends WHERE bond_name = ? ORDER BY year DESC').all(bondName);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bond-dividends', (req, res) => {
+  try {
+    const { bondName, year, dividendAmount } = req.body;
+    const existing = db.prepare('SELECT id FROM bond_annual_dividends WHERE bond_name = ? AND year = ?').get(bondName, year);
+    
+    if (existing) {
+      db.prepare('UPDATE bond_annual_dividends SET dividend_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE bond_name = ? AND year = ?')
+        .run(dividendAmount, bondName, year);
+    } else {
+      db.prepare('INSERT INTO bond_annual_dividends (bond_name, year, dividend_amount) VALUES (?, ?, ?)')
+        .run(bondName, year, dividendAmount);
+    }
+    
+    res.json({ bondName, year, dividendAmount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/bond-dividends/:bondName/:year', (req, res) => {
+  try {
+    const { bondName, year } = req.params;
+    db.prepare('DELETE FROM bond_annual_dividends WHERE bond_name = ? AND year = ?').run(bondName, parseInt(year));
+    res.json({ success: true, message: 'Dividend record deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bond Monthly Dividends endpoints
+app.get('/api/bond-monthly-dividends', (req, res) => {
+  try {
+    const data = db.prepare('SELECT * FROM bond_monthly_dividends ORDER BY bond_name').all();
+    const result = {};
+    data.forEach(row => {
+      result[row.bond_name] = {
+        jan: row.jan,
+        feb: row.feb,
+        mar: row.mar,
+        apr: row.apr,
+        may: row.may,
+        jun: row.jun,
+        jul: row.jul,
+        aug: row.aug,
+        sep: row.sep,
+        oct: row.oct,
+        nov: row.nov,
+        dec: row.dec
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/bond-monthly-dividends/:bondName', (req, res) => {
+  try {
+    const { bondName } = req.params;
+    const { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec } = req.body;
+    
+    const existing = db.prepare('SELECT id FROM bond_monthly_dividends WHERE bond_name = ?').get(bondName);
+    
+    if (existing) {
+      db.prepare(`
+        UPDATE bond_monthly_dividends
+        SET jan = ?, feb = ?, mar = ?, apr = ?, may = ?, jun = ?, jul = ?, aug = ?, sep = ?, oct = ?, nov = ?, dec = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE bond_name = ?
+      `).run(jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, bondName);
+    } else {
+      db.prepare(`
+        INSERT INTO bond_monthly_dividends (bond_name, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(bondName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec);
+    }
+    
+    res.json({ bond_name: bondName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bond Monthly Values endpoints
+app.get('/api/bond-monthly-values', (req, res) => {
+  try {
+    const data = db.prepare('SELECT * FROM bond_monthly_values ORDER BY bond_name').all();
+    const result = {};
+    data.forEach(row => {
+      result[row.bond_name] = {
+        jan: row.jan,
+        feb: row.feb,
+        mar: row.mar,
+        apr: row.apr,
+        may: row.may,
+        jun: row.jun,
+        jul: row.jul,
+        aug: row.aug,
+        sep: row.sep,
+        oct: row.oct,
+        nov: row.nov,
+        dec: row.dec
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/bond-monthly-values/:bondName', (req, res) => {
+  try {
+    const { bondName } = req.params;
+    const { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec } = req.body;
+    
+    const existing = db.prepare('SELECT id FROM bond_monthly_values WHERE bond_name = ?').get(bondName);
+    
+    if (existing) {
+      db.prepare(`
+        UPDATE bond_monthly_values
+        SET jan = ?, feb = ?, mar = ?, apr = ?, may = ?, jun = ?, jul = ?, aug = ?, sep = ?, oct = ?, nov = ?, dec = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE bond_name = ?
+      `).run(jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, bondName);
+    } else {
+      db.prepare(`
+        INSERT INTO bond_monthly_values (bond_name, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(bondName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec);
+    }
+    
+    res.json({ bond_name: bondName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Backup endpoints
+app.post('/api/backup/create', (req, res) => {
+  try {
+    const backupPath = createBackup();
+    cleanOldBackups(); // Keep only last 10 backups
+    res.json({ success: true, message: 'Backup created', backupPath });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/backup/list', (req, res) => {
+  try {
+    const backups = listBackups();
+    res.json(backups);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/backup/restore/:backupName', (req, res) => {
+  try {
+    const { backupName } = req.params;
+    
+    // Restore the backup while connection is still open
+    const success = restoreBackup(backupName);
+    
+    if (success) {
+      res.json({ success: true, message: 'Database restored successfully' });
+      
+      // Close database and exit to force process restart (which reloads all modules)
+      setTimeout(() => {
+        try {
+          db.close();
+        } catch (e) {
+          // Ignore close errors
+        }
+        process.exit(0);
+      }, 500);
+    } else {
+      res.status(400).json({ error: 'Failed to restore backup' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Alternative Investments Routes =====
+app.get('/api/alternative-investments', (req, res) => {
+  try {
+    const investments = db.prepare('SELECT * FROM alternative_investments ORDER BY created_at DESC').all();
+    res.json(investments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/alternative-investments', (req, res) => {
+  try {
+    const { name, asset_type, platform, quantity, unit_price, current_value, cost, notes } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO alternative_investments (name, asset_type, platform, quantity, unit_price, current_value, cost, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, notes || null);
+    res.json({ id: result.lastInsertRowid, name, asset_type, platform, quantity, unit_price, current_value, cost, notes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/alternative-investments/:id', (req, res) => {
+  try {
+    const { name, asset_type, platform, quantity, unit_price, current_value, cost, notes } = req.body;
+    const stmt = db.prepare(`
+      UPDATE alternative_investments 
+      SET name = ?, asset_type = ?, platform = ?, quantity = ?, unit_price = ?, current_value = ?, cost = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, notes || null, req.params.id);
+    res.json({ id: req.params.id, name, asset_type, platform, quantity, unit_price, current_value, cost, notes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/alternative-investments/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM alternative_investments WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM alternative_investment_monthly_data WHERE investment_name = (SELECT name FROM alternative_investments WHERE id = ?)').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Alternative Investment Monthly Data
+app.get('/api/alternative-investment-monthly-data/:investmentName', (req, res) => {
+  try {
+    const data = db.prepare('SELECT * FROM alternative_investment_monthly_data WHERE investment_name = ?').get(req.params.investmentName);
+    res.json(data || {});
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/alternative-investment-monthly-data/:investmentName', (req, res) => {
+  try {
+    const { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec } = req.body;
+    const existing = db.prepare('SELECT id FROM alternative_investment_monthly_data WHERE investment_name = ?').get(req.params.investmentName);
+    
+    if (existing) {
+      db.prepare(`
+        UPDATE alternative_investment_monthly_data 
+        SET jan = ?, feb = ?, mar = ?, apr = ?, may = ?, jun = ?, jul = ?, aug = ?, sep = ?, oct = ?, nov = ?, dec = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE investment_name = ?
+      `).run(jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, req.params.investmentName);
+    } else {
+      db.prepare(`
+        INSERT INTO alternative_investment_monthly_data (investment_name, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(req.params.investmentName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec);
+    }
+    res.json({ investment_name: req.params.investmentName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

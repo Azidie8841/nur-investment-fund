@@ -257,6 +257,22 @@ export const addSavingsRecord = async (record) => {
   }
 };
 
+export const updateSavingsRecord = async (id, record) => {
+  try {
+    const res = await fetch(`${API_BASE}/savings-records/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated savings record:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating savings record:', error);
+    throw error;
+  }
+};
+
 export const deleteSavingsRecord = async (id) => {
   try {
     const res = await fetch(`${API_BASE}/savings-records/${id}`, {
@@ -326,6 +342,267 @@ export const deleteSavingsGoal = async (id) => {
     return data;
   } catch (error) {
     console.error('Error deleting savings goal:', error);
+    throw error;
+  }
+};
+
+// Fixed Income Monthly Data
+export const fetchFixedIncomeMonthlyData = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-monthly-data`);
+    const data = await handleResponse(res);
+    console.log('Fetched fixed income monthly data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching fixed income monthly data:', error);
+    throw error;
+  }
+};
+
+export const updateFixedIncomeMonthlyData = async (assetName, monthlyData) => {
+  try {
+    const res = await fetch(`${API_BASE}/fixed-income-monthly-data/${assetName}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(monthlyData)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated fixed income monthly data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating fixed income monthly data:', error);
+    throw error;
+  }
+};
+
+// Bond Annual Dividends
+export const fetchBondDividends = async (bondName) => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-dividends/${bondName}`);
+    const data = await handleResponse(res);
+    console.log('Fetched bond dividends:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching bond dividends:', error);
+    throw error;
+  }
+};
+
+export const addBondDividend = async (bondName, year, dividendAmount) => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-dividends`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bondName, year, dividendAmount })
+    });
+    const data = await handleResponse(res);
+    console.log('Added bond dividend:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding bond dividend:', error);
+    throw error;
+  }
+};
+
+export const deleteBondDividend = async (bondName, year) => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-dividends/${bondName}/${year}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted bond dividend:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting bond dividend:', error);
+    throw error;
+  }
+};
+
+// Bond Monthly Dividends
+export const fetchBondMonthlyDividends = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-monthly-dividends`);
+    const data = await handleResponse(res);
+    console.log('Fetched bond monthly dividends:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching bond monthly dividends:', error);
+    throw error;
+  }
+};
+
+export const updateBondMonthlyDividends = async (bondName, monthlyData) => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-monthly-dividends/${bondName}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(monthlyData)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated bond monthly dividends:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating bond monthly dividends:', error);
+    throw error;
+  }
+};
+
+// Database Backup functions
+export const createDatabaseBackup = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/backup/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Backup created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    throw error;
+  }
+};
+
+export const listDatabaseBackups = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/backup/list`);
+    const data = await handleResponse(res);
+    console.log('Backups:', data);
+    return data;
+  } catch (error) {
+    console.error('Error listing backups:', error);
+    throw error;
+  }
+};
+
+export const restoreDatabaseBackup = async (backupName) => {
+  try {
+    const res = await fetch(`${API_BASE}/backup/restore/${backupName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Database restored:', data);
+    return data;
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    throw error;
+  }
+};
+
+// Bond Monthly Values
+export const fetchBondMonthlyValues = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-monthly-values`);
+    const data = await handleResponse(res);
+    console.log('Fetched bond monthly values:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching bond monthly values:', error);
+    throw error;
+  }
+};
+
+export const updateBondMonthlyValues = async (bondName, monthlyData) => {
+  try {
+    const res = await fetch(`${API_BASE}/bond-monthly-values/${bondName}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(monthlyData)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated bond monthly values:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating bond monthly values:', error);
+    throw error;
+  }
+};
+
+// Alternative Investments
+export const fetchAlternativeInvestments = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investments`);
+    const data = await handleResponse(res);
+    console.log('Fetched alternative investments:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching alternative investments:', error);
+    throw error;
+  }
+};
+
+export const addAlternativeInvestment = async (investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Added alternative investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding alternative investment:', error);
+    throw error;
+  }
+};
+
+export const updateAlternativeInvestment = async (id, investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated alternative investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating alternative investment:', error);
+    throw error;
+  }
+};
+
+export const deleteAlternativeInvestment = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investments/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted alternative investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting alternative investment:', error);
+    throw error;
+  }
+};
+
+export const fetchAlternativeInvestmentMonthlyData = async (investmentName) => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investment-monthly-data/${investmentName}`);
+    const data = await handleResponse(res);
+    console.log('Fetched alternative investment monthly data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching alternative investment monthly data:', error);
+    throw error;
+  }
+};
+
+export const updateAlternativeInvestmentMonthlyData = async (investmentName, monthlyData) => {
+  try {
+    const res = await fetch(`${API_BASE}/alternative-investment-monthly-data/${investmentName}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(monthlyData)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated alternative investment monthly data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating alternative investment monthly data:', error);
     throw error;
   }
 };

@@ -7,13 +7,14 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedInvestmentType, setSelectedInvestmentType] = useState(null);
+  const [selectedBond, setSelectedBond] = useState(null);
   const [financialDropdownOpen, setFinancialDropdownOpen] = useState(false);
   const [investmentDropdownOpen, setInvestmentDropdownOpen] = useState(false);
   // Simulated current user (for demo, can be switched to login later)
@@ -23,10 +24,16 @@ const NurInvestmentFund = () => {
   const [equitiesCompanies, setEquitiesCompanies] = useState([]);
   const [fixedIncomeBonds, setFixedIncomeBonds] = useState([]);
   const [assetMonthlyData, setAssetMonthlyData] = useState({});
+  const [fixedIncomeMonthlyData, setFixedIncomeMonthlyData] = useState({});
+  const [bondMonthlyDividends, setBondMonthlyDividends] = useState({});
+  const [bondMonthlyValues, setBondMonthlyValues] = useState({});
   const [profiles, setProfiles] = useState([]);
   const [performanceData, setPerformanceData] = useState([]);
   const [savingsRecords, setSavingsRecords] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
+  const [alternativeInvestments, setAlternativeInvestments] = useState([]);
+  const [alternativeInvestmentMonthlyData, setAlternativeInvestmentMonthlyData] = useState({});
+  const [selectedAlternativeInvestment, setSelectedAlternativeInvestment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -35,23 +42,59 @@ const NurInvestmentFund = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [companies, bonds, monthlyData, perfData, userProfiles, records, goals] = await Promise.all([
+        const [companies, bonds, monthlyData, fixedMonthlyData, perfData, userProfiles, records, goals, altInvestments] = await Promise.all([
           fetchEquitiesCompanies(),
           fetchFixedIncomeBonds(),
           fetchAssetMonthlyData(),
+          fetchFixedIncomeMonthlyData(),
           fetchPerformanceData(),
           fetchUserProfiles(),
           fetchSavingsRecords(),
-          fetchSavingsGoals()
+          fetchSavingsGoals(),
+          fetchAlternativeInvestments()
         ]);
+        
+        // Fetch dividends separately with error handling
+        let dividends = {};
+        try {
+          dividends = await fetchBondMonthlyDividends();
+        } catch (err) {
+          console.warn('Could not load bond dividends:', err);
+          dividends = {};
+        }
+
+        // Fetch monthly values separately with error handling
+        let monthlyValues = {};
+        try {
+          monthlyValues = await fetchBondMonthlyValues();
+        } catch (err) {
+          console.warn('Could not load bond monthly values:', err);
+          monthlyValues = {};
+        }
+
+        // Fetch alternative investment monthly data
+        let altMonthlyData = {};
+        try {
+          for (const inv of altInvestments) {
+            const monthlyData = await fetchAlternativeInvestmentMonthlyData(inv.name);
+            altMonthlyData[inv.name] = monthlyData;
+          }
+        } catch (err) {
+          console.warn('Could not load alternative investment monthly data:', err);
+        }
         
         setEquitiesCompanies(companies);
         setFixedIncomeBonds(bonds);
         setAssetMonthlyData(monthlyData);
+        setFixedIncomeMonthlyData(fixedMonthlyData);
+        setBondMonthlyDividends(dividends);
+        setBondMonthlyValues(monthlyValues);
         setPerformanceData(perfData.map(p => ({ month: p.month, value: p.value })));
         setProfiles(userProfiles);
         setSavingsRecords(records);
         setSavingsGoals(goals);
+        setAlternativeInvestments(altInvestments);
+        setAlternativeInvestmentMonthlyData(altMonthlyData);
         setError(null);
       } catch (err) {
         console.error('Error loading data from API:', err);
@@ -105,12 +148,51 @@ const NurInvestmentFund = () => {
 
   const initialMarketSegments = [
     { name: 'Equities', value: 13841391791701, countries: 62, companies: 8314, color: '#1e40af' },
-    { name: 'Fixed Income', value: 5311013977241, countries: 50, bonds: 1683, color: '#059669' },
-    { name: 'Real Estate', value: 365193706334, countries: 15, investments: 1341, color: '#d97706' },
-    { name: 'Renewable Energy', value: 84238157610, countries: 5, investments: 10, color: '#7c3aed' }
+    { name: 'Fixed Income', value: 5311013977241, countries: 50, bonds: 1683, color: '#059669' }
   ];
 
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [selectedSavingsRecord, setSelectedSavingsRecord] = useState(null);
+
+  // Calculate total fixed income bonds market value in RM
+  const calculateTotalFixedIncomeValue = () => {
+    return fixedIncomeBonds.reduce((total, bond) => {
+      // Get the most recent monthly value for this bond
+      const monthlyData = fixedIncomeMonthlyData[bond.name];
+      const months = ['dec', 'nov', 'oct', 'sep', 'aug', 'jul', 'jun', 'may', 'apr', 'mar', 'feb', 'jan'];
+      
+      let recentValue = null;
+      
+      // Look for the most recent month with data
+      if (monthlyData) {
+        for (let month of months) {
+          if (monthlyData[month] && monthlyData[month] > 0) {
+            recentValue = monthlyData[month];
+            break;
+          }
+        }
+      }
+      
+      // Fallback to bond base value if no monthly data found
+      if (recentValue === null || recentValue === undefined) {
+        recentValue = bond.value;
+      }
+      
+      return total + (recentValue * 3.7);
+    }, 0);
+  };
+
+  const calculateTotalAlternativeInvestmentsValue = () => {
+    return alternativeInvestments.reduce((total, inv) => {
+      return total + (inv.current_value || 0);
+    }, 0);
+  };
+
+  // Get unique countries from fixed income bonds
+  const getFixedIncomeCountries = () => {
+    const countries = new Set(fixedIncomeBonds.map(b => b.country).filter(c => c));
+    return countries.size;
+  };
 
   // Convert equitiesCompanies to holdings format for Portfolio view
   const holdings = equitiesCompanies.map(company => ({
@@ -292,6 +374,599 @@ const NurInvestmentFund = () => {
     </div>
   );
 
+  // Calculate total savings value
+  const calculateTotalSavingsValue = () => {
+    return savingsRecords.reduce((total, record) => total + (record.amount || 0), 0);
+  };
+
+  // Savings detail view for individual record (matching Equities detail structure)
+  const SavingsRecordDetailView = ({ recordId }) => {
+    const record = savingsRecords.find(r => r.id === recordId);
+    if (!record) return <div>Record not found</div>;
+
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthLabels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const recentValue = record.amount || 0;
+    const yearComparisonData = [
+      { label: '2024', value: (record.amount / 5.2) * 0.8 },
+      { label: '2025', value: recentValue / 5.2 }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <button 
+          onClick={() => setSelectedSavingsRecord(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to Cash & Cash Equivalents
+        </button>
+        
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-4">Savings Record</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div><span className="font-semibold">Record ID:</span> {record.id}</div>
+            <div><span className="font-semibold">Amount:</span> RM {(recentValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div><span className="font-semibold">Type:</span> {record.amount > 0 ? 'Cash In' : 'Cash Out'}</div>
+            <div><span className="font-semibold">Date:</span> {new Date(record.record_date).toLocaleDateString()}</div>
+            <div><span className="font-semibold">Notes:</span> {record.notes || 'N/A'}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Year Comparison</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yearComparisonData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip formatter={(value) => `RM ${(value * 5.2).toLocaleString('en-US', { maximumFractionDigits: 2 })}`} />
+              <Bar dataKey="value" fill="#06b6d4" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Record Details</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-2 text-left font-semibold">Field</th>
+                  <th className="px-2 py-2 text-left font-semibold bg-blue-100">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="px-2 py-2 border-t font-semibold">Amount (RM)</td>
+                  <td className="px-2 py-2 border-t bg-blue-50 font-semibold">RM {(recentValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td className="px-2 py-2 border-t font-semibold">Transaction Type</td>
+                  <td className="px-2 py-2 border-t bg-blue-50">{record.amount > 0 ? 'Cash In' : 'Cash Out'}</td>
+                </tr>
+                <tr>
+                  <td className="px-2 py-2 border-t font-semibold">Date</td>
+                  <td className="px-2 py-2 border-t bg-blue-50">{new Date(record.record_date).toLocaleDateString()}</td>
+                </tr>
+                <tr>
+                  <td className="px-2 py-2 border-t font-semibold">Notes</td>
+                  <td className="px-2 py-2 border-t bg-blue-50">{record.notes || '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Cash & Cash Equivalents detail view (table format like Equities)
+  const CashEquivalentDetailView = () => {
+    const [editingId, setEditingId] = useState(null);
+    const [editData, setEditData] = useState({});
+    const totalValue = calculateTotalSavingsValue();
+    const cashInTotal = savingsRecords
+      .filter(r => r.amount > 0)
+      .reduce((sum, r) => sum + (r.amount || 0), 0);
+    const cashOutTotal = savingsRecords
+      .filter(r => r.amount < 0)
+      .reduce((sum, r) => sum + Math.abs(r.amount || 0), 0);
+
+    const handleEditCash = async (id) => {
+      try {
+        await updateSavingsRecord(id, {
+          amount: parseFloat(editData.amount) || 0,
+          instrument_type: editData.instrument_type || 'Cash',
+          platform: editData.platform || null,
+          notes: editData.notes || null
+        });
+        setEditingId(null);
+        setEditData({});
+        const records = await fetchSavingsRecords();
+        setSavingsRecords(records);
+        alert('Cash record updated successfully');
+      } catch (error) {
+        alert('Failed to update record: ' + error.message);
+      }
+    };
+
+    const handleDeleteCash = async (id) => {
+      if (confirm('Are you sure you want to delete this cash record?')) {
+        try {
+          await deleteSavingsRecord(id);
+          const records = await fetchSavingsRecords();
+          setSavingsRecords(records);
+          alert('Cash record deleted successfully');
+        } catch (error) {
+          alert('Failed to delete record: ' + error.message);
+        }
+      }
+    };
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <button 
+            onClick={() => setSelectedInvestmentType(null)}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <span>←</span> Back to All Investments
+          </button>
+          
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Cash & Cash Equivalents</h2>
+            <p className="text-gray-600 mt-2">RM {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-sm text-gray-500">{savingsRecords.length} records • Net balance</p>
+          </div>
+
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Cash Records ({savingsRecords.length})</h3>
+              <input 
+                type="text" 
+                placeholder="Search for record"
+                className="px-4 py-2 border rounded-lg w-64"
+              />
+            </div>
+            
+            {savingsRecords.length > 0 ? (
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left py-3 px-4 font-semibold">Instrument Type</th>
+                      <th className="text-left py-3 px-4 font-semibold">Platform</th>
+                      <th className="text-right py-3 px-4 font-semibold">Current Balance (RM)</th>
+                      <th className="text-center py-3 px-4 font-semibold bg-blue-50">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {savingsRecords.map((record, idx) => (
+                      <tr 
+                        key={idx} 
+                        className="border-t hover:bg-gray-50"
+                      >
+                        {editingId === record.id ? (
+                          <>
+                            <td className="py-3 px-4">
+                              <input 
+                                type="text" 
+                                value={editData.instrument_type || ''} 
+                                onChange={(e) => setEditData({...editData, instrument_type: e.target.value})}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                                placeholder="Instrument Type"
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <input 
+                                type="text" 
+                                value={editData.platform || ''} 
+                                onChange={(e) => setEditData({...editData, platform: e.target.value})}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                                placeholder="Platform"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                value={editData.amount || ''} 
+                                onChange={(e) => setEditData({...editData, amount: e.target.value})}
+                                className="w-full border rounded px-2 py-1 text-sm text-right"
+                                placeholder="Amount"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-center bg-blue-50">
+                              <button 
+                                onClick={() => handleEditCash(record.id)}
+                                className="text-green-600 hover:text-green-800 font-semibold mr-3"
+                              >
+                                Save
+                              </button>
+                              <button 
+                                onClick={() => {setEditingId(null); setEditData({});}}
+                                className="text-gray-600 hover:text-gray-800 font-semibold"
+                              >
+                                Cancel
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-3 px-4 text-sm font-medium">{record.instrument_type || 'Cash'}</td>
+                            <td className="py-3 px-4 text-sm">{record.platform || '-'}</td>
+                            <td className="py-3 px-4 text-right font-bold text-blue-600">RM {(record.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="py-3 px-4 text-center bg-blue-50">
+                              <button 
+                                onClick={() => {setEditingId(record.id); setEditData(record);}}
+                                className="text-blue-600 hover:text-blue-800 font-semibold mr-3"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteCash(record.id)}
+                                className="text-red-600 hover:text-red-800 font-semibold"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500 border rounded-lg bg-gray-50">
+                <p>No savings records yet</p>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg border p-6">
+            <h3 className="text-lg font-semibold mb-4">Historic Investments - Cash & Cash Equivalents (2025)</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={[{ year: '2025', value: calculateTotalSavingsValue() / 5.2 }]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value) => `RM ${(value * 5.2).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  labelFormatter={(label) => `Year: ${label}`}
+                />
+                <Bar dataKey="value" fill="#06b6d4" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const AlternativeInvestmentListView = () => {
+    const [newInvestment, setNewInvestment] = useState({
+      asset_type: '',
+      name: '',
+      platform: '',
+      quantity: '',
+      unit_price: '',
+      current_value: '',
+      cost: ''
+    });
+    const [editingId, setEditingId] = useState(null);
+    const [editData, setEditData] = useState({});
+    const [selectedAssetType, setSelectedAssetType] = useState(null);
+
+    const totalValue = alternativeInvestments.reduce((sum, inv) => sum + (inv.current_value || 0), 0);
+
+    // Calculate value from quantity and unit price
+    const calculateValue = (quantity, unitPrice) => {
+      const q = parseFloat(quantity) || 0;
+      const p = parseFloat(unitPrice) || 0;
+      return q * p;
+    };
+
+    const handleAddInvestment = async () => {
+      if (!newInvestment.asset_type || !newInvestment.name || !newInvestment.quantity || !newInvestment.unit_price) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        const calculatedValue = calculateValue(newInvestment.quantity, newInvestment.unit_price);
+        const investmentData = {
+          asset_type: newInvestment.asset_type,
+          name: newInvestment.name,
+          platform: newInvestment.platform,
+          quantity: parseFloat(newInvestment.quantity),
+          unit_price: parseFloat(newInvestment.unit_price),
+          current_value: parseFloat(newInvestment.current_value) || calculatedValue,
+          cost: parseFloat(newInvestment.cost) || 0,
+          country: 'Malaysia'
+        };
+
+        await addAlternativeInvestment(investmentData);
+        setNewInvestment({
+          asset_type: '',
+          name: '',
+          platform: '',
+          quantity: '',
+          unit_price: '',
+          current_value: '',
+          cost: ''
+        });
+        
+        // Refresh data
+        const altInvestments = await fetchAlternativeInvestments();
+        setAlternativeInvestments(altInvestments);
+      } catch (error) {
+        alert('Failed to add investment: ' + error.message);
+      }
+    };
+
+    const handleUpdateInvestment = async (id) => {
+      try {
+        const calculatedValue = editData.quantity && editData.unit_price 
+          ? calculateValue(editData.quantity, editData.unit_price)
+          : (editData.current_value || 0);
+        
+        const updateData = {
+          name: editData.name,
+          asset_type: editData.asset_type,
+          platform: editData.platform || null,
+          quantity: editData.quantity || null,
+          unit_price: editData.unit_price || null,
+          current_value: editData.current_value || calculatedValue,
+          cost: editData.cost || null,
+          notes: editData.notes || null
+        };
+
+        await updateAlternativeInvestment(id, updateData);
+        setEditingId(null);
+        setEditData({});
+        
+        // Refresh data
+        const altInvestments = await fetchAlternativeInvestments();
+        setAlternativeInvestments(altInvestments);
+      } catch (error) {
+        alert('Failed to update investment: ' + error.message);
+      }
+    };
+
+    const handleDeleteInvestment = async (id) => {
+      if (confirm('Are you sure you want to delete this investment?')) {
+        try {
+          await deleteAlternativeInvestment(id);
+          
+          // Refresh data
+          const altInvestments = await fetchAlternativeInvestments();
+          setAlternativeInvestments(altInvestments);
+        } catch (error) {
+          alert('Failed to delete investment: ' + error.message);
+        }
+      }
+    };
+
+    // Get asset type breakdown for chart
+    const assetTypeData = alternativeInvestments.reduce((acc, inv) => {
+      const existing = acc.find(item => item.name === inv.asset_type);
+      if (existing) {
+        existing.value += inv.current_value;
+      } else {
+        acc.push({ name: inv.asset_type, value: inv.current_value });
+      }
+      return acc;
+    }, []);
+
+    // If viewing specific asset type
+    if (selectedAssetType) {
+      const typeInvestments = alternativeInvestments.filter(inv => inv.asset_type === selectedAssetType);
+      const typeTotal = typeInvestments.reduce((sum, inv) => sum + inv.current_value, 0);
+
+      return (
+        <div className="space-y-6">
+          <button 
+            onClick={() => setSelectedAssetType(null)}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          >
+            <span>←</span> Back to All Alternative Investments
+          </button>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 capitalize">{selectedAssetType}</h2>
+            <p className="text-gray-600 mb-4">Total Value: RM {typeTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b">
+                    <th className="px-4 py-2 text-left text-sm font-semibold">Asset</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold">Platform</th>
+                    <th className="px-4 py-2 text-right text-sm font-semibold">Units Held</th>
+                    <th className="px-4 py-2 text-right text-sm font-semibold">Unit Price</th>
+                    <th className="px-4 py-2 text-right text-sm font-semibold">Value (RM)</th>
+                    <th className="px-4 py-2 text-right text-sm font-semibold">Cost (RM)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {typeInvestments.map((inv) => (
+                    <tr key={inv.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm font-medium">{inv.name}</td>
+                      <td className="px-4 py-2 text-sm">{inv.platform || '—'}</td>
+                      <td className="px-4 py-2 text-right text-sm">{inv.quantity}</td>
+                      <td className="px-4 py-2 text-right text-sm">RM {(inv.current_value / inv.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 text-right text-sm font-semibold">RM {inv.current_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 text-right text-sm">RM {(inv.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <button 
+          onClick={() => setSelectedInvestmentType(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to All Investments
+        </button>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Alternative Investments</h2>
+          <p className="text-gray-600 mb-4">Total Value: RM {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+
+          {/* Add New Investment Form */}
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="text-lg font-semibold mb-4">Add New Investment</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <input
+                type="text"
+                placeholder="Asset Type (e.g., Crypto)"
+                value={newInvestment.asset_type}
+                onChange={(e) => setNewInvestment({...newInvestment, asset_type: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Asset Name"
+                value={newInvestment.name}
+                onChange={(e) => setNewInvestment({...newInvestment, name: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Platform"
+                value={newInvestment.platform}
+                onChange={(e) => setNewInvestment({...newInvestment, platform: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Units Held"
+                step="0.01"
+                value={newInvestment.quantity}
+                onChange={(e) => setNewInvestment({...newInvestment, quantity: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Unit Price (RM)"
+                step="0.01"
+                value={newInvestment.unit_price}
+                onChange={(e) => setNewInvestment({...newInvestment, unit_price: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder={`Total Value (Auto: ${calculateValue(newInvestment.quantity, newInvestment.unit_price).toFixed(2)})`}
+                step="0.01"
+                value={newInvestment.current_value}
+                onChange={(e) => setNewInvestment({...newInvestment, current_value: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Cost (RM)"
+                step="0.01"
+                value={newInvestment.cost}
+                onChange={(e) => setNewInvestment({...newInvestment, cost: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <button
+                onClick={handleAddInvestment}
+                className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Investments Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100 border-b">
+                  <th className="px-4 py-2 text-left text-sm font-semibold">Asset Type</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold">Asset</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold">Platform</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold">Units Held</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold">Unit Price</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold">Value (RM)</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold">Cost (RM)</th>
+                  <th className="px-4 py-2 text-center text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alternativeInvestments.map((inv) => (
+                  <tr key={inv.id} className="border-b hover:bg-gray-50">
+                    {editingId === inv.id ? (
+                      <>
+                        <td className="px-4 py-2"><input type="text" value={editData.asset_type || inv.asset_type} onChange={(e) => setEditData({...editData, asset_type: e.target.value})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2"><input type="text" value={editData.name || inv.name} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2"><input type="text" value={editData.platform || inv.platform || ''} onChange={(e) => setEditData({...editData, platform: e.target.value})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2 text-right"><input type="number" step="0.01" value={editData.quantity || inv.quantity} onChange={(e) => setEditData({...editData, quantity: parseFloat(e.target.value)})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2 text-right"><input type="number" step="0.01" value={editData.unit_price || ''} onChange={(e) => setEditData({...editData, unit_price: parseFloat(e.target.value)})} className="w-full border rounded px-2 py-1 text-sm" placeholder="Price" /></td>
+                        <td className="px-4 py-2 text-right"><input type="number" step="0.01" value={editData.current_value || inv.current_value} onChange={(e) => setEditData({...editData, current_value: parseFloat(e.target.value)})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2 text-right"><input type="number" step="0.01" value={editData.cost || 0} onChange={(e) => setEditData({...editData, cost: parseFloat(e.target.value)})} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                        <td className="px-4 py-2 text-center">
+                          <button onClick={() => handleUpdateInvestment(inv.id)} className="text-green-600 hover:text-green-800 mr-2">✓</button>
+                          <button onClick={() => setEditingId(null)} className="text-gray-600 hover:text-gray-800">✕</button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-2 text-sm capitalize cursor-pointer hover:text-blue-600 hover:underline" onClick={() => setSelectedAssetType(inv.asset_type)}>{inv.asset_type}</td>
+                        <td className="px-4 py-2 text-sm font-medium">{inv.name}</td>
+                        <td className="px-4 py-2 text-sm">{inv.platform || '—'}</td>
+                        <td className="px-4 py-2 text-right text-sm">{inv.quantity}</td>
+                        <td className="px-4 py-2 text-right text-sm">RM {(inv.current_value / inv.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-2 text-right text-sm font-semibold">RM {inv.current_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-2 text-right text-sm">RM {(inv.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-2 text-center">
+                          <button onClick={() => {setEditingId(inv.id); setEditData(inv);}} className="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
+                          <button onClick={() => handleDeleteInvestment(inv.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {alternativeInvestments.length === 0 && (
+            <div className="text-center py-12 text-gray-500 border rounded-lg bg-gray-50">
+              <p>No alternative investments yet. Add one using the form above.</p>
+            </div>
+          )}
+
+          {/* Asset Type Distribution Chart */}
+          {assetTypeData.length > 0 && (
+            <div className="mt-8 bg-gray-50 rounded-lg p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Asset Type Distribution</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={assetTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip formatter={(value) => `RM ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} contentStyle={{backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px'}} />
+                  <Bar dataKey="value" fill="#3b82f6" name="Value (RM)" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const AssetDetailView = ({ assetName }) => {
     const asset = equitiesCompanies.find(a => a.name === assetName);
     const monthlyData = assetMonthlyData[assetName] || {};
@@ -410,6 +1085,89 @@ const NurInvestmentFund = () => {
     };
   };
 
+  const AlternativeInvestmentDetailView = ({ investmentId }) => {
+    const investment = alternativeInvestments.find(inv => inv.id === investmentId);
+    const monthlyData = alternativeInvestmentMonthlyData[investment?.name] || {};
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthLabels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    if (!investment) return null;
+
+    // Find the latest month with a value > 0
+    let latestMonthValue = monthlyData.dec || investment.current_value;
+    for (let i = months.length - 1; i >= 0; i--) {
+      if (monthlyData[months[i]] && monthlyData[months[i]] > 0) {
+        latestMonthValue = monthlyData[months[i]];
+        break;
+      }
+    }
+    
+    const recentValue = latestMonthValue;
+    const yearComparisonData = [
+      { label: '2024', value: (investment.current_value / 5.2) * 0.8 },
+      { label: '2025', value: recentValue / 5.2 }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setSelectedAlternativeInvestment(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to Alternative Investments
+        </button>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-4">{investment.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div><span className="font-semibold">Asset Name:</span> {investment.name}</div>
+            <div><span className="font-semibold">Recent Value:</span> RM {(recentValue * 5.2).toLocaleString()}</div>
+            <div><span className="font-semibold">Type:</span> <span className="capitalize">{investment.asset_type}</span></div>
+            <div><span className="font-semibold">Country:</span> {investment.country || 'N/A'}</div>
+            <div><span className="font-semibold">Quantity:</span> {investment.quantity} {investment.unit || ''}</div>
+            <div><span className="font-semibold">Notes:</span> {investment.notes || 'N/A'}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Year Comparison</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yearComparisonData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip formatter={(value) => `RM ${(value * 5.2).toLocaleString('en-US', { maximumFractionDigits: 2 })}`} />
+              <Bar dataKey="value" fill="#ef4444" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Values (2025)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {monthLabels.map((m) => (
+                    <th key={m} className="px-2 py-2 text-left font-semibold">{m}</th>
+                  ))}
+                  <th className="px-2 py-2 text-left font-semibold bg-blue-100">Recent 2025 Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {months.map((m) => (
+                    <td key={m} className="px-2 py-2 border-t">RM {((monthlyData[m] || 0) * 5.2).toLocaleString()}</td>
+                  ))}
+                  <td className="px-2 py-2 border-t bg-blue-50 font-semibold">RM {(recentValue * 5.2).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const EquitiesDetailView = () => {
     const totalValue = calculateTotalEquitiesValue();
     
@@ -495,93 +1253,348 @@ const NurInvestmentFund = () => {
     );
   };
 
+  const FixedIncomeDetailView = () => {
+    const totalValue = calculateTotalFixedIncomeValue();
+    
+    return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <button 
+          onClick={() => setSelectedInvestmentType(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to All Investments
+        </button>
+        
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Fixed Income</h2>
+          <p className="text-gray-600 mt-2">RM {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-sm text-gray-500">{fixedIncomeBonds.length} bonds • Total market value</p>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Bonds ({fixedIncomeBonds.length})</h3>
+            <input 
+              type="text" 
+              placeholder="Search for bond"
+              className="px-4 py-2 border rounded-lg w-64"
+            />
+          </div>
+          
+          <div className="overflow-x-auto border rounded-lg">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left py-3 px-4 font-semibold">Bond Name</th>
+                  <th className="text-right py-3 px-4 font-semibold">Market Value (RM)</th>
+                  <th className="text-left py-3 px-4 font-semibold">Type</th>
+                  <th className="text-left py-3 px-4 font-semibold">Rating</th>
+                  <th className="text-left py-3 px-4 font-semibold">Country</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fixedIncomeBonds.map((bond, idx) => {
+                  const displayValue = bond.value * 3.7;
+                  return (
+                    <tr key={idx} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedBond(bond.name)}>
+                      <td className="py-3 px-4">
+                        <span className="text-blue-600 hover:underline">{bond.name}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">RM {displayValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4">{bond.bond_type}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          bond.rating === 'AAA' ? 'bg-green-100 text-green-800' :
+                          bond.rating === 'AA' ? 'bg-green-100 text-green-700' :
+                          bond.rating === 'A' ? 'bg-blue-100 text-blue-800' :
+                          bond.rating === 'BBB' ? 'bg-yellow-100 text-yellow-800' :
+                          bond.rating === 'BB' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {bond.rating}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">{bond.country}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          
+          {fixedIncomeBonds.length === 0 && (
+            <div className="mt-4 text-center text-gray-500">
+              No fixed income bonds added yet.
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Historic Investments - Fixed Income (2025)</h3>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={[{ year: '2025', value: calculateTotalFixedIncomeValue() / 3.7 }]}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                labelFormatter={(label) => `Year: ${label}`}
+              />
+              <Bar dataKey="value" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
+  const BondDetailView = ({ bondName }) => {
+    const bond = fixedIncomeBonds.find(b => b.name === bondName);
+    const monthlyData = fixedIncomeMonthlyData[bondName] || {};
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthLabels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    if (!bond) return null;
+
+    // Find the latest month with a value > 0
+    let latestMonthValue = monthlyData.dec || bond.value;
+    for (let i = months.length - 1; i >= 0; i--) {
+      if (monthlyData[months[i]] && monthlyData[months[i]] > 0) {
+        latestMonthValue = monthlyData[months[i]];
+        break;
+      }
+    }
+    
+    const recentValue = latestMonthValue;
+    const yearComparisonData = [
+      { label: '2024', value: (bond.value / 3.7) * 0.8 },
+      { label: '2025', value: recentValue / 3.7 }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setSelectedBond(null)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <span>←</span> Back to Fixed Income
+        </button>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-4">{bond.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div><span className="font-semibold">Bond Name:</span> {bond.name}</div>
+            <div><span className="font-semibold">Recent Value:</span> RM {(recentValue * 3.7).toLocaleString()}</div>
+            <div><span className="font-semibold">Type:</span> {bond.bond_type}</div>
+            <div><span className="font-semibold">Rating:</span> {bond.rating}</div>
+            <div><span className="font-semibold">Country:</span> {bond.country}</div>
+            <div><span className="font-semibold">Maturity:</span> {bond.maturity_date || 'N/A'}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Year Comparison</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yearComparisonData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { maximumFractionDigits: 2 })}`} />
+              <Bar dataKey="value" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Values (2025)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {monthLabels.map((m) => (
+                    <th key={m} className="px-2 py-2 text-left font-semibold">{m}</th>
+                  ))}
+                  <th className="px-2 py-2 text-left font-semibold bg-blue-100">Recent 2025 Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {months.map((m) => (
+                    <td key={m} className="px-2 py-2 border-t">RM {((monthlyData[m] || 0) * 3.7).toLocaleString()}</td>
+                  ))}
+                  <td className="px-2 py-2 border-t bg-blue-50 font-semibold">RM {(recentValue * 3.7).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const AllInvestmentsView = () => {
     const equitiesSegment = getEquitiesSegmentData();
-    const totalAllInvestments = equitiesSegment.value;
+    const totalEquities = equitiesSegment.value;
+    const totalFixedIncome = calculateTotalFixedIncomeValue() / 3.7; // Convert back to base currency
     
-    // Market segments - static data with Equities calculated from actual data
+    // Market segments - static data with Equities and Fixed Income calculated from actual data
     const marketSegments = [
       {
         name: 'Equities',
-        value: totalAllInvestments,
+        value: totalEquities,
         countries: equitiesSegment.countries,
         companies: equitiesSegment.companies,
         color: '#1e40af'
       },
       {
         name: 'Fixed Income',
-        value: 1433273569,
-        countries: 50,
-        bonds: 1683,
+        value: totalFixedIncome,
+        countries: getFixedIncomeCountries(),
+        bonds: fixedIncomeBonds.length,
         color: '#059669'
-      },
-      {
-        name: 'Real Estate',
-        value: 98721018,
-        countries: 15,
-        investments: 1341,
-        color: '#d97706'
-      },
-      {
-        name: 'Renewable Energy',
-        value: 22748312,
-        countries: 5,
-        investments: 10,
-        color: '#7c3aed'
       }
     ];
     
     const totalValue = marketSegments.reduce((sum, seg) => sum + seg.value, 0);
+    const totalAssets = totalValue * 3.7 + calculateTotalSavingsValue() + alternativeInvestments.reduce((sum, inv) => sum + (inv.current_value || 0), 0);
     
     return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">All Investments Overview</h2>
-          <p className="text-gray-600 mt-2">Total market value: RM {(totalValue * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-          <p className="text-sm text-gray-500">{marketSegments.reduce((sum, seg) => sum + seg.countries, 0)} countries • {equitiesSegment.companies + (1683 + 1341 + 10)} investments • 100% of all investments</p>
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-lg shadow-lg text-white" style={{maxWidth: '100%', margin: '0 auto', padding: '2rem'}}>
+        <div className="mb-4">
+          <h2 className="text-3xl font-bold mb-2 tracking-wide">TOTAL MARKET VALUE</h2>
+          <p className="text-4xl font-bold text-white">RM {totalAssets.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
         </div>
+        <div className="flex gap-6 text-xs text-gray-300 mt-4">
+          <div>
+            <span className="font-semibold text-white">{equitiesSegment.countries}</span> countries
+          </div>
+          <div>
+            <span className="font-semibold text-white">{equitiesSegment.companies + fixedIncomeBonds.length + alternativeInvestments.length}</span> investments
+          </div>
+          <div>
+            <span className="font-semibold text-white">100%</span> of all investments
+          </div>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {marketSegments.map((segment, idx) => (
-            <div 
-              key={idx} 
-              className="border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => {
-                if (segment.name === 'Equities') {
-                  setSelectedInvestmentType('equities');
-                }
-              }}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ color: segment.color }}>{segment.name}</h3>
-              <p className="text-2xl font-bold text-gray-900 mb-2">
-                RM {(segment.value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <div className="space-y-1 text-sm text-gray-600">
-                <p>{segment.countries} countries</p>
-                <p>{segment.companies || segment.bonds || segment.investments} {segment.companies ? 'companies' : segment.bonds ? 'bonds' : 'investments'}</p>
-                <p>{((segment.value / totalValue) * 100).toFixed(1)}% of all investments</p>
-              </div>
+      {/* Investment Cards - Single Horizontal Line */}
+      <div className="flex gap-4 overflow-x-auto pb-4" style={{width: 'calc(4 * 288px + 3 * 16px)', maxWidth: '100%', marginX: 'auto'}}>
+        {/* Equities Card */}
+        <div 
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          onClick={() => setSelectedInvestmentType('equities')}
+        >
+          <div className="flex justify-center mb-3">
+            <div className="text-5xl">📈</div>
+          </div>
+          <h3 className="text-xs font-bold text-slate-300 tracking-wider text-center mb-2">EQUITIES</h3>
+          <p className="text-base font-bold text-amber-400 text-center mb-2">
+            RM {calculateTotalEquitiesValue().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          <div className="text-center text-xs text-slate-400 mb-3">
+            <div className="flex justify-center items-center gap-2">
+              <span>📊 {equitiesSegment.companies} companies</span>
+              <span>🌐 {equitiesSegment.countries} countries</span>
             </div>
-          ))}
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+            <div className="bg-blue-500 h-2 rounded-full" style={{width: `${((totalEquities / totalValue) * 100)}%`}}></div>
+          </div>
+          <p className="text-xs text-slate-400 text-center font-semibold">{((totalEquities / totalValue) * 100).toFixed(1)}%</p>
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-xl">→</span>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
-          <h3 className="text-lg font-semibold mb-4">Historic Investments (Billions NOK)</h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={initialGlobalMarketData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="equities" stackId="a" fill="#1e40af" name="Equity Investments" />
-              <Bar dataKey="fixed" stackId="a" fill="#059669" name="Fixed-income Investments" />
-              <Bar dataKey="real" stackId="a" fill="#d97706" name="Real Estate Investments" />
-              <Bar dataKey="renewable" stackId="a" fill="#7c3aed" name="Renewable Energy" />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Alternative Investments Card */}
+        <div 
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          onClick={() => setSelectedInvestmentType('alternative')}
+        >
+          <div className="flex justify-center mb-3">
+            <div className="text-5xl">💼</div>
+          </div>
+          <h3 className="text-xs font-bold text-slate-300 tracking-wider text-center mb-2">ALTERNATIVE INVESTMENTS</h3>
+          <p className="text-base font-bold text-amber-400 text-center mb-2">
+            RM {calculateTotalAlternativeInvestmentsValue().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          <div className="text-center text-xs text-slate-400 mb-3">
+            <div className="flex justify-center items-center gap-2">
+              <span>📊 {alternativeInvestments.length} investments</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+            <div className="bg-red-500 h-2 rounded-full" style={{width: `${((calculateTotalAlternativeInvestmentsValue() / totalValue) * 100)}%`}}></div>
+          </div>
+          <p className="text-xs text-slate-400 text-center font-semibold">{((calculateTotalAlternativeInvestmentsValue() / totalValue) * 100).toFixed(1)}%</p>
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-xl">→</span>
         </div>
+        {/* Fixed Income Card */}
+        <div 
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          onClick={() => setSelectedInvestmentType('fixed-income')}
+        >
+          <div className="flex justify-center mb-3">
+            <div className="text-5xl">📄</div>
+          </div>
+          <h3 className="text-xs font-bold text-slate-300 tracking-wider text-center mb-2">FIXED INCOME</h3>
+          <p className="text-base font-bold text-amber-400 text-center mb-2">
+            RM {calculateTotalFixedIncomeValue().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          <div className="text-center text-xs text-slate-400 mb-3">
+            <div className="flex justify-center items-center gap-2">
+              <span>📋 {fixedIncomeBonds.length} bonds</span>
+              <span>🌐 {getFixedIncomeCountries()} countries</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+            <div className="bg-emerald-500 h-2 rounded-full" style={{width: `${((totalFixedIncome / totalValue) * 100)}%`}}></div>
+          </div>
+          <p className="text-xs text-slate-400 text-center font-semibold">{((totalFixedIncome / totalValue) * 100).toFixed(1)}%</p>
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-xl">→</span>
+        </div>
+
+        {/* Cash & Cash Equivalents Card */}
+        <div 
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          onClick={() => setSelectedInvestmentType('cash')}
+        >
+          <div className="flex justify-center mb-3">
+            <div className="text-5xl">💵</div>
+          </div>
+          <h3 className="text-xs font-bold text-slate-300 tracking-wider text-center mb-2">CASH & CASH EQUIVALENTS</h3>
+          <p className="text-base font-bold text-amber-400 text-center mb-2">
+            RM {calculateTotalSavingsValue().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          <div className="text-center text-xs text-slate-400 mb-3">
+            <div className="flex justify-center items-center gap-2">
+              <span>📊 {savingsRecords.length} records</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+            <div className="bg-cyan-500 h-2 rounded-full" style={{width: `${((calculateTotalSavingsValue() / totalAssets) * 100)}%`}}></div>
+          </div>
+          <p className="text-xs text-slate-400 text-center font-semibold">{((calculateTotalSavingsValue() / totalAssets) * 100).toFixed(1)}%</p>
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-xl">→</span>
+        </div>
+      </div>
+
+      {/* Historical Investments Chart */}
+      <div className="bg-slate-900 rounded-lg border border-slate-700" style={{maxWidth: '100%', margin: '0 auto', padding: '1.5rem'}}>
+        <h3 className="text-sm font-semibold mb-1 text-slate-300">Historical Investments</h3>
+        <p className="text-xs text-slate-500 mb-4">Values are in billion RM as of Dec 5, 2025. The left y-axis shows the fund's total value. The right y-axis shows the value of the asset classes.</p>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={initialGlobalMarketData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+            <XAxis dataKey="year" stroke="#94a3b8" />
+            <YAxis stroke="#94a3b8" />
+            <Tooltip contentStyle={{backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#cbd5e1'}} />
+            <Legend wrapperStyle={{color: '#94a3b8'}} />
+            <Bar dataKey="equities" stackId="a" fill="#3b82f6" name="Equity Investments" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="fixed" stackId="a" fill="#10b981" name="Fixed-income Investments" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
     );
@@ -963,11 +1976,29 @@ const NurInvestmentFund = () => {
     // if (!user) {
     //   return <LoginPage profiles={profiles} onLogin={setUser} />;
     // }
+    if (selectedSavingsRecord) {
+      return <SavingsRecordDetailView recordId={selectedSavingsRecord} />;
+    }
     if (selectedAsset) {
       return <AssetDetailView assetName={selectedAsset} />;
     }
+    if (selectedAlternativeInvestment) {
+      return <AlternativeInvestmentDetailView investmentId={selectedAlternativeInvestment} />;
+    }
+    if (activeSection === 'allinvestments' && selectedInvestmentType === 'cash') {
+      return <CashEquivalentDetailView />;
+    }
+    if (activeSection === 'allinvestments' && selectedInvestmentType === 'alternative') {
+      return <AlternativeInvestmentListView />;
+    }
     if (activeSection === 'allinvestments' && selectedInvestmentType === 'equities') {
       return <EquitiesDetailView />;
+    }
+    if (activeSection === 'allinvestments' && selectedInvestmentType === 'fixed-income' && selectedBond) {
+      return <BondDetailView bondName={selectedBond} />;
+    }
+    if (activeSection === 'allinvestments' && selectedInvestmentType === 'fixed-income') {
+      return <FixedIncomeDetailView />;
     }
     switch (activeSection) {
       case 'dashboard':
@@ -987,10 +2018,14 @@ const NurInvestmentFund = () => {
             setFixedIncomeBonds={setFixedIncomeBonds}
             assetMonthlyData={assetMonthlyData}
             setAssetMonthlyData={setAssetMonthlyData}
+            fixedIncomeMonthlyData={fixedIncomeMonthlyData}
+            setFixedIncomeMonthlyData={setFixedIncomeMonthlyData}
             savingsRecords={savingsRecords}
             setSavingsRecords={setSavingsRecords}
             savingsGoals={savingsGoals}
             setSavingsGoals={setSavingsGoals}
+            alternativeInvestments={alternativeInvestments}
+            setAlternativeInvestments={setAlternativeInvestments}
           />
         );
       case 'profiles':
@@ -1062,34 +2097,34 @@ const NurInvestmentFund = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow border-b sticky top-0 z-50">
+    <div className="min-h-screen bg-slate-950">
+      <header className="bg-slate-900 shadow border-b border-slate-800 sticky top-0 z-50">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button 
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors" 
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors" 
                 onClick={() => {
                   setSidebarOpen(!sidebarOpen);
                   setMobileMenuOpen(!mobileMenuOpen);
                 }}
                 title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
               >
-                <Menu className="w-5 h-5 text-gray-600" />
+                <Menu className="w-5 h-5 text-slate-300" />
               </button>
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">N</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Nur' Investment Fund</h1>
-                <p className="text-sm text-gray-600">Family Wealth Management</p>
+                <h1 className="text-xl font-bold text-slate-100">Nur' Investment Fund</h1>
+                <p className="text-sm text-slate-400">Family Wealth Management</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
                 <div className="text-right">
-                  <p className="text-sm font-medium">{currentUser?.name}</p>
-                  <p className="text-xs text-gray-600">{currentUser?.role}</p>
+                  <p className="text-sm font-medium text-slate-200">{currentUser?.name}</p>
+                  <p className="text-xs text-slate-400">{currentUser?.role}</p>
                 </div>
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Users className="w-5 h-5 text-blue-600" />
@@ -1118,13 +2153,13 @@ const NurInvestmentFund = () => {
         <aside 
           className={`${
             mobileMenuOpen ? 'block' : 'hidden'
-          } md:block w-64 bg-white border-r min-h-screen fixed md:static left-0 top-16 md:top-0 z-40 transition-all duration-300`}>
+          } md:block w-64 bg-slate-900 border-r border-slate-800 min-h-screen fixed md:static left-0 top-16 md:top-0 z-40 transition-all duration-300`}>
           <div className="flex justify-end p-4 md:hidden">
             <button 
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-slate-800 rounded-lg"
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X className="w-5 h-5 text-slate-300" />
             </button>
           </div>
           <nav className="p-4 space-y-2 mt-0 md:mt-4">
@@ -1141,8 +2176,8 @@ const NurInvestmentFund = () => {
                       }}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                         item.submenu.some(sub => activeSection === sub.id || (sub.submenu && sub.submenu.some(s => activeSection === s.id)))
-                          ? 'bg-blue-50 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-blue-600 text-white font-medium'
+                          : 'text-slate-300 hover:bg-slate-800'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -1156,7 +2191,7 @@ const NurInvestmentFund = () => {
                     
                     {/* Dropdown submenu */}
                     {financialDropdownOpen && (
-                      <div className="pl-2 space-y-1 bg-gray-50 rounded-lg py-1">
+                      <div className="pl-2 space-y-1 bg-slate-800 rounded-lg py-1">
                         {item.submenu.map((subitem) => {
                           const SubIcon = subitem.icon;
                           
@@ -1170,8 +2205,8 @@ const NurInvestmentFund = () => {
                                   }}
                                   className={`w-full flex items-center justify-between px-3 py-2 rounded transition-colors text-sm ${
                                     subitem.submenu.some(s => activeSection === s.id)
-                                      ? 'bg-blue-100 text-blue-600 font-medium'
-                                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                      ? 'bg-blue-600 text-white font-medium'
+                                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2">
@@ -1197,8 +2232,8 @@ const NurInvestmentFund = () => {
                                           }}
                                           className={`w-full flex items-center gap-2 px-3 py-2 rounded transition-colors text-xs ${
                                             activeSection === subsubitem.id
-                                              ? 'bg-blue-200 text-blue-700 font-medium'
-                                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'
+                                              ? 'bg-blue-600 text-white font-medium'
+                                              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
                                           }`}
                                         >
                                           <SubSubIcon className="w-3 h-3" />
@@ -1222,8 +2257,8 @@ const NurInvestmentFund = () => {
                               }}
                               className={`w-full flex items-center gap-3 px-4 py-2 rounded transition-colors text-sm ${
                                 activeSection === subitem.id
-                                  ? 'bg-blue-100 text-blue-600 font-medium'
-                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                  ? 'bg-blue-600 text-white font-medium'
+                                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                               }`}
                             >
                               <SubIcon className="w-4 h-4" />
@@ -1247,8 +2282,8 @@ const NurInvestmentFund = () => {
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     activeSection === item.id
-                      ? 'bg-blue-50 text-blue-600 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
