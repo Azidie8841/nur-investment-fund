@@ -1,12 +1,149 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 // Create or open database
 const dbPath = path.join(__dirname, 'nur_fund.db');
 const db = new Database(dbPath);
 
+// ==================== DATA SAFETY FUNCTIONS ====================
+
+/**
+ * Backup database before making schema changes
+ * Creates timestamped backup in backups folder
+ */
+const backupDatabase = () => {
+  try {
+    const backupsDir = path.join(__dirname, 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('Z')[0];
+    const backupPath = path.join(backupsDir, `nur_fund_backup_${timestamp}.db`);
+    
+    fs.copyFileSync(dbPath, backupPath);
+    console.log(`✓ Database backed up: ${backupPath}`);
+    return backupPath;
+  } catch (error) {
+    console.error(`✗ Backup failed: ${error.message}`);
+    return null;
+  }
+};
+
+/**
+ * Add column to table if it doesn't exist
+ * Safely adds new columns without losing data
+ */
+const addColumnIfNotExists = (tableName, columnName, columnDefinition) => {
+  try {
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+    const columnExists = columns.some(col => col.name === columnName);
+    
+    if (!columnExists) {
+      db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`).run();
+      console.log(`✓ Added column ${columnName} to ${tableName}`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`✗ Error adding column ${columnName}: ${error.message}`);
+    return false;
+  }
+};
+
+/**
+ * Check if table exists
+ */
+const tableExists = (tableName) => {
+  try {
+    const result = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(tableName);
+    return !!result;
+  } catch (error) {
+    console.error(`✗ Error checking table: ${error.message}`);
+    return false;
+  }
+};
+
+/**
+ * Get table column information
+ */
+const getTableColumns = (tableName) => {
+  try {
+    return db.prepare(`PRAGMA table_info(${tableName})`).all();
+  } catch (error) {
+    console.error(`✗ Error getting columns: ${error.message}`);
+    return [];
+  }
+};
+
+/**
+ * Validate table schema matches expected columns
+ */
+const validateTableSchema = (tableName, expectedColumns) => {
+  try {
+    const actualColumns = getTableColumns(tableName);
+    const actualNames = actualColumns.map(col => col.name);
+    
+    const missingColumns = expectedColumns.filter(col => !actualNames.includes(col));
+    
+    if (missingColumns.length > 0) {
+      console.warn(`⚠ Table ${tableName} missing columns:`, missingColumns);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`✗ Schema validation error: ${error.message}`);
+    return false;
+  }
+};
+
+/**
+ * Execute operation with transaction for data safety
+ * Rolls back all changes if any error occurs
+ */
+const executeTransaction = (operation, description = 'Database operation') => {
+  const transaction = db.transaction(operation);
+  
+  try {
+    console.log(`Starting transaction: ${description}`);
+    transaction();
+    console.log(`✓ Transaction completed: ${description}`);
+    return true;
+  } catch (error) {
+    console.error(`✗ Transaction failed (${description}): ${error.message}`);
+    console.error('All changes have been rolled back');
+    return false;
+  }
+};
+
+/**
+ * Initialize or upgrade schema version
+ */
+const initializeSchemaVersion = () => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_version (
+      id INTEGER PRIMARY KEY,
+      version INTEGER NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  const schemaInfo = db.prepare(`SELECT version FROM schema_version LIMIT 1`).get();
+  
+  if (!schemaInfo) {
+    db.prepare(`INSERT INTO schema_version (version) VALUES (?)`).run(1);
+    console.log('✓ Initialized schema version to 1');
+  }
+  
+  return schemaInfo?.version || 1;
+};
+
 // Initialize tables
 const initializeDb = () => {
+  // Initialize schema versioning system first
+  initializeSchemaVersion();
   // Equities Companies table
   db.exec(`
     CREATE TABLE IF NOT EXISTS equities_companies (
@@ -226,63 +363,7 @@ const initializeDb = () => {
   `);
 
   // Migration: Check if old schema exists and migrate to new schema
-  const tableInfo = db.prepare('PRAGMA table_info(alternative_investments)').all();
-  const hasOldUnit = tableInfo.some(col => col.name === 'unit');
-  const hasPlatform = tableInfo.some(col => col.name === 'platform');
-  const hasUnitPrice = tableInfo.some(col => col.name === 'unit_price');
-  const hasCost = tableInfo.some(col => col.name === 'cost');
-
-  if (hasOldUnit && !hasPlatform) {
-    console.log('Migrating alternative_investments table schema...');
-    try {
-      // Create new table with correct schema
-      db.exec(`
-        CREATE TABLE alternative_investments_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          asset_type TEXT NOT NULL,
-          platform TEXT,
-          quantity REAL,
-          unit_price REAL,
-          current_value REAL NOT NULL,
-          cost REAL,
-          notes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
-      // Copy data from old table
-      db.exec(`
-        INSERT INTO alternative_investments_new (id, name, asset_type, quantity, current_value, notes, created_at, updated_at)
-        SELECT id, name, asset_type, quantity, current_value, notes, created_at, updated_at FROM alternative_investments
-      `);
-      
-      // Drop old table and rename new one
-      db.exec(`DROP TABLE alternative_investments`);
-      db.exec(`ALTER TABLE alternative_investments_new RENAME TO alternative_investments`);
-      
-      console.log('✓ Migration completed successfully');
-    } catch (err) {
-      console.error('Migration error:', err.message);
-    }
-  } else if (!hasPlatform) {
-    console.log('Adding missing columns to alternative_investments...');
-    const addColumnIfNotExists = (columnName, columnType) => {
-      try {
-        db.prepare(`ALTER TABLE alternative_investments ADD COLUMN ${columnName} ${columnType}`).run();
-        console.log(`✓ Added column ${columnName}`);
-      } catch (err) {
-        console.log(`Column ${columnName} already exists or error: ${err.message}`);
-      }
-    };
-
-    addColumnIfNotExists('platform', 'TEXT');
-    addColumnIfNotExists('unit_price', 'REAL');
-    addColumnIfNotExists('cost', 'REAL');
-  } else {
-    console.log('✓ alternative_investments table schema is up to date');
-  }
+  migrateAlternativeInvestments();
 
   // Alternative Investment Monthly Data table
   db.exec(`
@@ -398,6 +479,122 @@ const initializeDb = () => {
     insertGoal.run('Primary Goal', 500000, '2031-12-31', 'Active', 'Long-term wealth accumulation');
     insertGoal.run('Emergency Fund', 50000, '2025-12-31', 'On Track', 'Emergency savings for 6 months');
   }
+  
+  // Create strategic plans table safely
+  createStrategicPlansTableSafely();
 };
 
-module.exports = { db, initializeDb };
+// ==================== MIGRATION FUNCTIONS ====================
+
+/**
+ * Migrate alternative_investments table if schema changed
+ * Preserves all existing data during migration
+ */
+const migrateAlternativeInvestments = () => {
+  try {
+    const tableInfo = db.prepare('PRAGMA table_info(alternative_investments)').all();
+    const columnNames = tableInfo.map(col => col.name);
+    
+    const requiredColumns = ['id', 'name', 'asset_type', 'platform', 'quantity', 'unit_price', 'current_value', 'cost', 'notes', 'created_at', 'updated_at'];
+    const missingColumns = requiredColumns.filter(col => !columnNames.includes(col));
+    
+    if (missingColumns.length > 0) {
+      console.log(`Migrating alternative_investments table. Missing columns: ${missingColumns.join(', ')}`);
+      
+      // Start transaction for safe migration
+      executeTransaction(() => {
+        // Create backup before migration
+        backupDatabase();
+        
+        // Create temporary table with correct schema
+        db.exec(`
+          CREATE TABLE alternative_investments_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            asset_type TEXT NOT NULL,
+            platform TEXT,
+            quantity REAL,
+            unit_price REAL,
+            current_value REAL NOT NULL,
+            cost REAL,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        // Copy existing data to new table
+        const oldData = db.prepare(`
+          SELECT 
+            id, name, asset_type, 
+            COALESCE(quantity, 0) as quantity,
+            current_value, notes, created_at, updated_at
+          FROM alternative_investments
+        `).all();
+        
+        const insertStmt = db.prepare(`
+          INSERT INTO alternative_investments_new (id, name, asset_type, quantity, current_value, notes, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        oldData.forEach(row => {
+          insertStmt.run(row.id, row.name, row.asset_type, row.quantity, row.current_value, row.notes, row.created_at, row.updated_at);
+        });
+        
+        // Drop old table
+        db.exec(`DROP TABLE alternative_investments`);
+        
+        // Rename new table
+        db.exec(`ALTER TABLE alternative_investments_new RENAME TO alternative_investments`);
+        
+        console.log('✓ Migration completed successfully');
+      }, 'Migrate alternative_investments table');
+    }
+  } catch (error) {
+    console.error(`Migration error: ${error.message}`);
+  }
+};
+
+/**
+ * Create strategic plans table safely
+ */
+const createStrategicPlansTableSafely = () => {
+  executeTransaction(() => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS strategic_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plan_id INTEGER,
+        name TEXT NOT NULL,
+        timeframe TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Create index for faster queries
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_strategic_plans_id 
+      ON strategic_plans(plan_id)
+    `);
+    
+    console.log('✓ Strategic plans table ready');
+  }, 'Create strategic_plans table');
+};
+
+// ==================== INITIALIZATION ====================
+
+module.exports = { 
+  db, 
+  initializeDb,
+  backupDatabase,
+  addColumnIfNotExists,
+  tableExists,
+  getTableColumns,
+  validateTableSchema,
+  executeTransaction,
+  initializeSchemaVersion,
+  migrateAlternativeInvestments,
+  createStrategicPlansTableSafely
+};

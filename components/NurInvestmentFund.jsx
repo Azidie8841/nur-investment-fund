@@ -2127,7 +2127,6 @@ const NurInvestmentFund = () => {
                 </div>
               )}
             </div>
-            </div>
           </div>
         </div>
       );
