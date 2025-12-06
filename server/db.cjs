@@ -61,6 +61,93 @@ const initializeDb = () => {
     )
   `);
 
+  // Fixed Income Monthly Data table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS fixed_income_monthly_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      asset_name TEXT NOT NULL,
+      jan REAL,
+      feb REAL,
+      mar REAL,
+      apr REAL,
+      may REAL,
+      jun REAL,
+      jul REAL,
+      aug REAL,
+      sep REAL,
+      oct REAL,
+      nov REAL,
+      dec REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(asset_name) REFERENCES fixed_income_bonds(name),
+      UNIQUE(asset_name)
+    )
+  `);
+
+  // Bond Annual Dividend table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bond_annual_dividends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bond_name TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      dividend_amount REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(bond_name) REFERENCES fixed_income_bonds(name),
+      UNIQUE(bond_name, year)
+    )
+  `);
+
+  // Bond Monthly Dividend table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bond_monthly_dividends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bond_name TEXT NOT NULL,
+      jan REAL,
+      feb REAL,
+      mar REAL,
+      apr REAL,
+      may REAL,
+      jun REAL,
+      jul REAL,
+      aug REAL,
+      sep REAL,
+      oct REAL,
+      nov REAL,
+      dec REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(bond_name) REFERENCES fixed_income_bonds(name),
+      UNIQUE(bond_name)
+    )
+  `);
+
+  // Bond Monthly Value table (tracks bond price/value changes)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bond_monthly_values (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bond_name TEXT NOT NULL,
+      jan REAL,
+      feb REAL,
+      mar REAL,
+      apr REAL,
+      may REAL,
+      jun REAL,
+      jul REAL,
+      aug REAL,
+      sep REAL,
+      oct REAL,
+      nov REAL,
+      dec REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(bond_name) REFERENCES fixed_income_bonds(name),
+      UNIQUE(bond_name)
+    )
+  `);
+
+
   // Performance Data table
   db.exec(`
     CREATE TABLE IF NOT EXISTS performance_data (
@@ -107,6 +194,117 @@ const initializeDb = () => {
       description TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Strategic Plans table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS strategic_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      timeframe TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Alternative Investments table (Crypto, Gold, etc.)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alternative_investments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      asset_type TEXT NOT NULL,
+      platform TEXT,
+      quantity REAL,
+      unit_price REAL,
+      current_value REAL NOT NULL,
+      cost REAL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Migration: Check if old schema exists and migrate to new schema
+  const tableInfo = db.prepare('PRAGMA table_info(alternative_investments)').all();
+  const hasOldUnit = tableInfo.some(col => col.name === 'unit');
+  const hasPlatform = tableInfo.some(col => col.name === 'platform');
+  const hasUnitPrice = tableInfo.some(col => col.name === 'unit_price');
+  const hasCost = tableInfo.some(col => col.name === 'cost');
+
+  if (hasOldUnit && !hasPlatform) {
+    console.log('Migrating alternative_investments table schema...');
+    try {
+      // Create new table with correct schema
+      db.exec(`
+        CREATE TABLE alternative_investments_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          asset_type TEXT NOT NULL,
+          platform TEXT,
+          quantity REAL,
+          unit_price REAL,
+          current_value REAL NOT NULL,
+          cost REAL,
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // Copy data from old table
+      db.exec(`
+        INSERT INTO alternative_investments_new (id, name, asset_type, quantity, current_value, notes, created_at, updated_at)
+        SELECT id, name, asset_type, quantity, current_value, notes, created_at, updated_at FROM alternative_investments
+      `);
+      
+      // Drop old table and rename new one
+      db.exec(`DROP TABLE alternative_investments`);
+      db.exec(`ALTER TABLE alternative_investments_new RENAME TO alternative_investments`);
+      
+      console.log('✓ Migration completed successfully');
+    } catch (err) {
+      console.error('Migration error:', err.message);
+    }
+  } else if (!hasPlatform) {
+    console.log('Adding missing columns to alternative_investments...');
+    const addColumnIfNotExists = (columnName, columnType) => {
+      try {
+        db.prepare(`ALTER TABLE alternative_investments ADD COLUMN ${columnName} ${columnType}`).run();
+        console.log(`✓ Added column ${columnName}`);
+      } catch (err) {
+        console.log(`Column ${columnName} already exists or error: ${err.message}`);
+      }
+    };
+
+    addColumnIfNotExists('platform', 'TEXT');
+    addColumnIfNotExists('unit_price', 'REAL');
+    addColumnIfNotExists('cost', 'REAL');
+  } else {
+    console.log('✓ alternative_investments table schema is up to date');
+  }
+
+  // Alternative Investment Monthly Data table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alternative_investment_monthly_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      investment_name TEXT NOT NULL,
+      jan REAL,
+      feb REAL,
+      mar REAL,
+      apr REAL,
+      may REAL,
+      jun REAL,
+      jul REAL,
+      aug REAL,
+      sep REAL,
+      oct REAL,
+      nov REAL,
+      dec REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(investment_name) REFERENCES alternative_investments(name),
+      UNIQUE(investment_name)
     )
   `);
 

@@ -607,3 +607,61 @@ export const updateAlternativeInvestmentMonthlyData = async (investmentName, mon
   }
 };
 
+// Strategic Plans
+export const fetchStrategicPlans = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/strategic-plans`);
+    const data = await handleResponse(res);
+    console.log('Fetched strategic plans:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching strategic plans:', error);
+    throw error;
+  }
+};
+
+export const createStrategicPlan = async (plan) => {
+  try {
+    const res = await fetch(`${API_BASE}/strategic-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(plan)
+    });
+    const data = await handleResponse(res);
+    console.log('Created strategic plan:', data);
+    return data;
+  } catch (error) {
+    console.error('Error creating strategic plan:', error);
+    throw error;
+  }
+};
+
+export const updateStrategicPlan = async (id, plan) => {
+  try {
+    const res = await fetch(`${API_BASE}/strategic-plans/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(plan)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated strategic plan:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating strategic plan:', error);
+    throw error;
+  }
+};
+
+export const deleteStrategicPlan = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/strategic-plans/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted strategic plan:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting strategic plan:', error);
+    throw error;
+  }
+};

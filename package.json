@@ -9,7 +9,10 @@
     "server:dev": "node server/index.cjs",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node tests/run-tests.cjs",
+    "test:backup": "node tests/run-tests.cjs",
+    "test:responsive": "node tests/responsive-zoom.test.cjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
@@ -23,6 +26,7 @@
     "recharts": "*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "*",
     "autoprefixer": "^10.4.22",
     "concurrently": "^9.2.1",

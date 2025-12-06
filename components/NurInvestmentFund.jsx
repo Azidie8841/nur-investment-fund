@@ -37,6 +37,13 @@ const NurInvestmentFund = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Strategic Plans state
+  const [plans, setPlans] = useState([]);
+  const [planProgress, setPlanProgress] = useState({});
+  const [viewingThemeId, setViewingThemeId] = useState(null);
+  const [editingTheme, setEditingTheme] = useState(null);
+  const [themeDetails, setThemeDetails] = useState({});
+
   // Load data from API on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -228,6 +235,7 @@ const NurInvestmentFund = () => {
         { id: 'savings', name: 'Savings', icon: DollarSign }
       ]
     },
+    { id: 'plans', name: 'Strategic Plans', icon: Target },
     { id: 'admin', name: 'Admin', icon: Shield },
     { id: 'profiles', name: 'User Profiles', icon: Users, adminOnly: true },
     { id: 'myprofile', name: 'My Profile', icon: Users }
@@ -1972,6 +1980,250 @@ const NurInvestmentFund = () => {
     );
   };
 
+  const renderPlans = () => {
+    // Show theme detail page if a theme is selected
+    if (viewingThemeId !== null) {
+      return (
+        <div className="space-y-0 min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 -m-6 -m-8 p-8">
+          {/* Hero Section */}
+          <div className="relative h-80 bg-gradient-to-r from-blue-800 to-blue-900 overflow-hidden rounded-lg mb-0">
+            {/* Back Button */}
+            <button
+              onClick={() => setViewingThemeId(null)}
+              className="absolute top-6 left-6 z-10 text-white hover:text-blue-200 font-medium flex items-center gap-2 text-sm"
+            >
+              ← Back to Plans
+            </button>
+
+            {/* Header Content */}
+            <div className="relative h-full flex items-center px-8">
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-blue-300 shadow-lg">
+                  <span className="text-2xl font-bold text-blue-800">{['A1', 'A2', 'A3', 'A4'][viewingThemeId]}</span>
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-2">
+                    {['MENANGANI ISU KEMAMPUAN DAN KEPELBAGAIAN PERUMAHAN', 'Implementation Phase', 'Active Deployment', 'Monitoring & Adjustment'][viewingThemeId]}
+                  </h1>
+                  <p className="text-blue-100 text-lg">Strategic Initiative for Nur' Family</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress - Top Right */}
+            <div className="absolute top-8 right-8 text-white">
+              <div className="text-sm font-semibold mb-2">Pencapaian Sasaran Inisiatif Strategi</div>
+              <div className="w-96 h-8 bg-white/20 rounded-full overflow-hidden border border-white/30">
+                <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600" style={{width: '66%'}}></div>
+              </div>
+              <div className="text-right text-2xl font-bold mt-2">66%</div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="bg-white rounded-lg shadow-lg mt-6">
+            <div className="p-8">
+              {/* Four Radial Gauge Charts */}
+              <div className="grid grid-cols-4 gap-6 mb-12">
+                {[0, 1, 2, 3].map((idx) => {
+                  const percentages = [77.35, 100.00, 23.16, 23.16];
+                  const percentage = percentages[idx];
+                  const radius = 50;
+                  const centerX = 100;
+                  const centerY = 100;
+                  
+                  // Calculate angle: 0% = 0°, 100% = 180°
+                  const angle = (percentage / 100) * Math.PI;
+                  const endX = centerX + radius * Math.cos(Math.PI - angle);
+                  const endY = centerY - radius * Math.sin(angle);
+                  const largeArc = percentage > 50 ? 1 : 0;
+                  
+                  return (
+                    <div key={idx} className="bg-white rounded-lg shadow-lg p-8 border border-gray-200 flex flex-col items-center justify-center">
+                      <div className="text-lg font-bold text-gray-800 mb-6">A1T{idx + 1}</div>
+                      
+                      {/* Radial Semicircle Gauge */}
+                      <div className="relative w-48 h-32 flex items-center justify-center mb-6">
+                        <svg width="200" height="120" viewBox="0 0 200 120" className="w-full h-full">
+                          {/* Background arc (full semicircle) */}
+                          <path
+                            d="M 50 100 A 50 50 0 0 1 150 100"
+                            fill="none"
+                            stroke="#d1d5db"
+                            strokeWidth="14"
+                            strokeLinecap="round"
+                          />
+                          
+                          {/* Filled progress arc */}
+                          <path
+                            d={`M 50 100 A 50 50 0 ${largeArc} 1 ${endX} ${endY}`}
+                            fill="none"
+                            stroke="#1e40af"
+                            strokeWidth="14"
+                            strokeLinecap="round"
+                            className="transition-all duration-700"
+                          />
+                        </svg>
+                        
+                        {/* Percentage text */}
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+                          <span className="text-2xl font-bold text-gray-800">{percentage.toFixed(2)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabs */}
+              <div className="mt-8">
+                <div className="flex gap-8 border-b border-gray-200 mb-8">
+                  <button className="px-4 py-3 font-medium text-gray-700 border-b-2 border-blue-600 text-blue-600">
+                    Sasaran
+                  </button>
+                  <button className="px-4 py-3 font-medium text-gray-500 hover:text-gray-700">
+                    Tajuk Sasaran
+                  </button>
+                  <button className="px-4 py-3 font-medium text-gray-500 hover:text-gray-700 ml-auto">
+                    Maklumat Lanjut
+                  </button>
+                </div>
+
+                {/* Content Table */}
+                <div className="space-y-4">
+                  {[
+                    { id: 'A1T1', desc: 'Pembekalan 220,000 unit Rumah Mampu Milik menjelang tahun 2030' },
+                    { id: 'A1T2', desc: '3,000 keluarga mendapat faedah daripada kewujudan skim perumahan urban menjelang tahun 2030' },
+                    { id: 'A1T3', desc: 'Pembekalan 22,000 unit sewa beli menjelang tahun 2030' }
+                  ].map((item) => (
+                    <div key={item.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-blue-300 hover:shadow transition cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-gray-800 min-w-20">{item.id}</span>
+                          <span className="text-gray-700">{item.desc}</span>
+                        </div>
+                        <span className="text-gray-400">↓</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Admin Buttons */}
+              {user?.role === 'admin' && (
+                <div className="flex gap-3 mt-12 pt-8 border-t">
+                  <button
+                    onClick={() => setEditingTheme(viewingThemeId)}
+                    className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium"
+                  >
+                    Edit Theme
+                  </button>
+                  <button
+                    onClick={() => setViewingThemeId(null)}
+                    className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition font-medium"
+                  >
+                    Back
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show plans list
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-8 text-white">
+          <h2 className="text-3xl font-bold mb-2">Strategic Plans</h2>
+          <p className="text-blue-100">RANCANGAN NUR' KE - 1 | Timeframe: 2025-2030</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Plan Progress</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Plan Progression (%)</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={planProgress[1] || 0}
+                onChange={(e) => setPlanProgress({ ...planProgress, [1]: parseInt(e.target.value) })}
+                className="w-full"
+              />
+              <div className="text-right text-sm text-gray-600 mt-2">{planProgress[1] || 0}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-2">TEMA A</h3>
+          <p className="text-sm text-gray-600 mb-6">MEMBANGUNKAN ASAS EKONOMI NUR'</p>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { title: 'A1', subtext: 'Membina Kubu Kewangan Nur\'', progress: planProgress[1] ? Math.min(100, planProgress[1] * 0.8) : 0 },
+              { title: 'Development', subtext: 'Implementation Phase', progress: planProgress[1] ? Math.max(0, Math.min(100, planProgress[1] - 20)) : 0 },
+              { title: 'Execution', subtext: 'Active Deployment', progress: planProgress[1] ? Math.max(0, Math.min(100, planProgress[1] * 1.1)) : 0 },
+              { title: 'Review', subtext: 'Monitoring & Adjustment', progress: planProgress[1] ? Math.min(100, planProgress[1] * 0.9) : 0 }
+            ].map((theme, idx) => (
+              <div 
+                key={idx} 
+                onClick={() => setViewingThemeId(idx)}
+                className="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4 border border-blue-100 text-center flex flex-col items-center justify-between cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+              >
+                <div>
+                  <h4 className="text-base font-bold text-gray-800 mb-1">{theme.title}</h4>
+                  <p className="text-xs text-gray-600 mb-4">{theme.subtext}</p>
+                </div>
+                
+                <div className="flex justify-center mb-3 w-full">
+                  <div className="relative" style={{ width: '100px', height: '100px' }}>
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="54"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="54"
+                        fill="none"
+                        stroke="url(#gradient)"
+                        strokeWidth="8"
+                        strokeDasharray={`${(theme.progress / 100) * 339.29} 339.29`}
+                        strokeLinecap="round"
+                        className="transition-all duration-500"
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#1e40af" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-blue-600">{Math.round(theme.progress)}%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-gray-600">
+                  {theme.progress < 30 ? 'Starting' : theme.progress < 60 ? 'In Progress' : theme.progress < 90 ? 'Advanced' : 'Completing'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     // if (!user) {
     //   return <LoginPage profiles={profiles} onLogin={setUser} />;
@@ -2052,6 +2304,8 @@ const NurInvestmentFund = () => {
         return <DocumentsView />;
       case 'savings':
         return <SavingsView />;
+      case 'plans':
+        return renderPlans();
       default:
         return (
           <div className="bg-white rounded-lg shadow p-12 text-center">

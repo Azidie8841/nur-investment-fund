@@ -18,6 +18,10 @@ build/
 # Database - DO NOT PUSH
 *.db
 *.sqlite
+
+# Backups - Private & Local Only
+/server/backups/
+
 server/nur_fund.db
 
 # Logs

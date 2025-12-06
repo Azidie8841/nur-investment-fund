@@ -657,6 +657,162 @@ app.put('/api/alternative-investment-monthly-data/:investmentName', (req, res) =
   }
 });
 
+// ===== Strategic Plans Routes =====
+app.get('/api/strategic-plans', (req, res) => {
+  try {
+    const plans = db.prepare('SELECT * FROM strategic_plans ORDER BY id DESC').all();
+    res.json(plans);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/strategic-plans', (req, res) => {
+  try {
+    const { name, timeframe } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO strategic_plans (name, timeframe)
+      VALUES (?, ?)
+    `);
+    const result = stmt.run(name, timeframe);
+    res.json({ id: result.lastInsertRowid, name, timeframe });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/strategic-plans/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, timeframe } = req.body;
+    db.prepare(`
+      UPDATE strategic_plans
+      SET name = ?, timeframe = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(name, timeframe, id);
+    res.json({ id, name, timeframe });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/strategic-plans/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM strategic_plans WHERE id = ?').run(id);
+    res.json({ success: true, id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Strategic Plans Routes (JSON File Storage) =====
+const fs = require('fs');
+const path = require('path');
+const plansFilePath = path.join(__dirname, 'strategic_plans.json');
+
+// Helper to read plans from JSON file
+const readPlans = () => {
+  try {
+    if (fs.existsSync(plansFilePath)) {
+      const data = fs.readFileSync(plansFilePath, 'utf8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error reading plans file:', error);
+    return [];
+  }
+};
+
+// Helper to write plans to JSON file
+const writePlans = (plans) => {
+  try {
+    fs.writeFileSync(plansFilePath, JSON.stringify(plans, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error writing plans file:', error);
+    return false;
+  }
+};
+
+// GET all strategic plans
+app.get('/api/strategic-plans', (req, res) => {
+  try {
+    const plans = readPlans();
+    res.json(plans);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST create new strategic plan
+app.post('/api/strategic-plans', (req, res) => {
+  try {
+    const { name, timeframe } = req.body;
+    const plans = readPlans();
+    
+    const newPlan = {
+      id: Math.max(...plans.map(p => p.id), 0) + 1,
+      name,
+      timeframe,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    plans.push(newPlan);
+    writePlans(plans);
+    res.json(newPlan);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT update strategic plan
+app.put('/api/strategic-plans/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, timeframe } = req.body;
+    const plans = readPlans();
+    
+    const planIndex = plans.findIndex(p => p.id === parseInt(id));
+    if (planIndex === -1) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    
+    plans[planIndex] = {
+      ...plans[planIndex],
+      name,
+      timeframe,
+      updated_at: new Date().toISOString()
+    };
+    
+    writePlans(plans);
+    res.json(plans[planIndex]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE strategic plan
+app.delete('/api/strategic-plans/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    let plans = readPlans();
+    
+    const planIndex = plans.findIndex(p => p.id === parseInt(id));
+    if (planIndex === -1) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    
+    plans = plans.filter(p => p.id !== parseInt(id));
+    writePlans(plans);
+    res.json({ success: true, id: parseInt(id) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server running' });
