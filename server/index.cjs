@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const { db, initializeDb } = require('./db.cjs');
@@ -831,24 +834,25 @@ app.post('/api/reports/savings-email', async (req, res) => {
     const htmlContent = generateSavingsEmailReport(records, totalSavings, 'Savings Records Report');
     console.log('✓ HTML report generated');
     
-    // Send email via Mailhog
+    // Send email via Gmail
+    const recipientEmail = process.env.GMAIL_RECIPIENT || 'family@example.com';
     const mailOptions = {
-      from: 'nur.fund@example.com',
-      to: 'family@example.com',
+      from: process.env.GMAIL_USER,
+      to: recipientEmail,
       subject: 'Savings Records Report - Nur Investment Fund',
       html: htmlContent,
       text: `Savings Report\n\nTotal Records: ${records.length}\nTotal Savings: RM ${totalSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     };
     
     await transporter.sendMail(mailOptions);
-    console.log('✓ Email sent successfully via Mailhog');
+    console.log('✓ Email sent successfully via Gmail to:', recipientEmail);
     
     const response = { 
       success: true, 
       message: 'Email report sent successfully!',
       recordCount: records.length,
       totalSavings: totalSavings,
-      sentTo: 'family@example.com',
+      sentTo: recipientEmail,
       timestamp: new Date().toISOString()
     };
     
@@ -860,17 +864,23 @@ app.post('/api/reports/savings-email', async (req, res) => {
     console.error('❌ Error in email report endpoint:', error.message);
     console.error('Stack:', error.stack);
     
-    // Check if it's a Mailhog connection error
-    const isMailhogError = error.message.includes('ECONNREFUSED') || error.message.includes('getaddrinfo');
-    const errorMessage = isMailhogError 
-      ? 'Mailhog not running. Start it with: MailHog.exe (then visit http://localhost:1025)'
-      : error.message;
+    let errorMessage = error.message;
+    let setupInstructions = '';
+    
+    // Check for specific Gmail errors
+    if (error.message.includes('Invalid login') || error.message.includes('Unauthorized')) {
+      setupInstructions = 'Please check your Gmail credentials and App Password';
+      errorMessage = 'Gmail authentication failed. Invalid email or password.';
+    } else if (error.message.includes('GMAIL_USER') || !process.env.GMAIL_USER) {
+      setupInstructions = 'Gmail is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD environment variables';
+      errorMessage = 'Gmail configuration missing.';
+    }
     
     res.status(500).setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({ 
       success: false, 
       error: errorMessage,
-      mailhogNote: 'Make sure Mailhog is running on localhost:1025'
+      instructions: setupInstructions || 'Check server logs for details'
     }));
   }
 });
