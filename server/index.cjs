@@ -815,8 +815,9 @@ app.delete('/api/strategic-plans/:id', (req, res) => {
 
 // ===== Email Report Routes =====
 const { generateSavingsEmailReport, generateInvestmentEmailReport } = require('./email-report-service.cjs');
+const transporter = require('./email-config.cjs');
 
-app.post('/api/reports/savings-email', (req, res) => {
+app.post('/api/reports/savings-email', async (req, res) => {
   try {
     console.log('📧 Email report request received');
     
@@ -826,25 +827,50 @@ app.post('/api/reports/savings-email', (req, res) => {
     const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);
     console.log('✓ Total savings calculated:', totalSavings);
     
+    // Generate HTML report
+    const htmlContent = generateSavingsEmailReport(records, totalSavings, 'Savings Records Report');
+    console.log('✓ HTML report generated');
+    
+    // Send email via Mailhog
+    const mailOptions = {
+      from: 'nur.fund@example.com',
+      to: 'family@example.com',
+      subject: 'Savings Records Report - Nur Investment Fund',
+      html: htmlContent,
+      text: `Savings Report\n\nTotal Records: ${records.length}\nTotal Savings: RM ${totalSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    };
+    
+    await transporter.sendMail(mailOptions);
+    console.log('✓ Email sent successfully via Mailhog');
+    
     const response = { 
       success: true, 
-      message: 'Email report generated successfully',
+      message: 'Email report sent successfully!',
       recordCount: records.length,
       totalSavings: totalSavings,
+      sentTo: 'family@example.com',
       timestamp: new Date().toISOString()
     };
     
-    console.log('✓ About to send JSON response');
+    console.log('✓ Sending success response');
     res.setHeader('Content-Type', 'application/json');
     res.status(200).send(JSON.stringify(response));
-    console.log('✓ JSON response sent');
+    console.log('✓ Response sent');
   } catch (error) {
     console.error('❌ Error in email report endpoint:', error.message);
     console.error('Stack:', error.stack);
+    
+    // Check if it's a Mailhog connection error
+    const isMailhogError = error.message.includes('ECONNREFUSED') || error.message.includes('getaddrinfo');
+    const errorMessage = isMailhogError 
+      ? 'Mailhog not running. Start it with: MailHog.exe (then visit http://localhost:1025)'
+      : error.message;
+    
     res.status(500).setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({ 
       success: false, 
-      error: error.message
+      error: errorMessage,
+      mailhogNote: 'Make sure Mailhog is running on localhost:1025'
     }));
   }
 });
