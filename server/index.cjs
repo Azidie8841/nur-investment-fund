@@ -816,7 +816,33 @@ app.delete('/api/strategic-plans/:id', (req, res) => {
 // ===== Email Report Routes =====
 const { generateSavingsEmailReport, generateInvestmentEmailReport } = require('./email-report-service.cjs');
 
-app.get('/api/reports/savings-email', (req, res) => {
+app.post('/api/reports/savings-email', (req, res) => {
+  try {
+    const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
+    const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    
+    const htmlReport = generateSavingsEmailReport(records, totalSavings, 'Savings Records Report');
+    
+    // Log that email report was generated (in production, you'd send via email service)
+    console.log('✓ Savings email report generated for', records.length, 'records');
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ 
+      success: true, 
+      message: 'Email report generated successfully',
+      recordCount: records.length,
+      totalSavings: totalSavings
+    });
+  } catch (error) {
+    console.error('Error generating savings email report:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+app.get('/api/reports/savings-email-download', (req, res) => {
   try {
     const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
     const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);

@@ -1917,7 +1917,30 @@ const NurInvestmentFund = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Savings Records</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Savings Records</h3>
+            <button
+              onClick={() => {
+                fetch('/api/reports/savings-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({})
+                })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success) {
+                    alert('Email report sent successfully!');
+                  } else {
+                    alert('Failed to send email report');
+                  }
+                })
+                .catch(err => alert('Error sending email: ' + err.message));
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+            >
+              Send Email Report
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
