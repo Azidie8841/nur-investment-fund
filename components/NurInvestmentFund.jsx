@@ -36,6 +36,7 @@ const NurInvestmentFund = () => {
   const [selectedAlternativeInvestment, setSelectedAlternativeInvestment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [funds, setFunds] = useState([]);
 
   // Strategic Plans state
   const [plans, setPlans] = useState([]);
@@ -1921,20 +1922,37 @@ const NurInvestmentFund = () => {
             <h3 className="text-lg font-semibold">Savings Records</h3>
             <button
               onClick={() => {
-                fetch('/api/reports/savings-email', {
+                fetch('http://localhost:5000/api/reports/savings-email', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({})
                 })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    alert('Email report sent successfully!');
-                  } else {
-                    alert('Failed to send email report');
+                .then(async res => {
+                  const text = await res.text();
+                  console.log('Response status:', res.status);
+                  console.log('Response text:', text);
+                  
+                  if (!text) {
+                    throw new Error(`Empty response from server (status: ${res.status})`);
+                  }
+                  try {
+                    return JSON.parse(text);
+                  } catch (e) {
+                    throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
                   }
                 })
-                .catch(err => alert('Error sending email: ' + err.message));
+                .then(data => {
+                  console.log('Parsed data:', data);
+                  if (data.success) {
+                    alert('Email report sent successfully!\n' + data.message);
+                  } else {
+                    alert('Failed to send email report: ' + (data.error || 'Unknown error'));
+                  }
+                })
+                .catch(err => {
+                  console.error('Fetch error:', err);
+                  alert('Error sending email: ' + err.message);
+                });
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
             >
@@ -2443,6 +2461,8 @@ const NurInvestmentFund = () => {
             setSavingsGoals={setSavingsGoals}
             alternativeInvestments={alternativeInvestments}
             setAlternativeInvestments={setAlternativeInvestments}
+            funds={funds}
+            setFunds={setFunds}
           />
         );
       case 'profiles':

@@ -818,27 +818,34 @@ const { generateSavingsEmailReport, generateInvestmentEmailReport } = require('.
 
 app.post('/api/reports/savings-email', (req, res) => {
   try {
+    console.log('📧 Email report request received');
+    
     const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
+    console.log('✓ Retrieved', records.length, 'records from database');
+    
     const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    console.log('✓ Total savings calculated:', totalSavings);
     
-    const htmlReport = generateSavingsEmailReport(records, totalSavings, 'Savings Records Report');
-    
-    // Log that email report was generated (in production, you'd send via email service)
-    console.log('✓ Savings email report generated for', records.length, 'records');
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.json({ 
+    const response = { 
       success: true, 
       message: 'Email report generated successfully',
       recordCount: records.length,
-      totalSavings: totalSavings
-    });
+      totalSavings: totalSavings,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('✓ About to send JSON response');
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).send(JSON.stringify(response));
+    console.log('✓ JSON response sent');
   } catch (error) {
-    console.error('Error generating savings email report:', error);
-    res.status(500).json({ 
+    console.error('❌ Error in email report endpoint:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ 
       success: false, 
-      error: error.message 
-    });
+      error: error.message
+    }));
   }
 });
 
