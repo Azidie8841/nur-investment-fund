@@ -16,7 +16,18 @@ export default function AdminPanel({
   setSavingsGoals,
   alternativeInvestments,
   setAlternativeInvestments,
+  funds,
+  setFunds,
 }) {
+  // Fund management state
+  const [editingFund, setEditingFund] = useState(null);
+  const [editFundName, setEditFundName] = useState('');
+  const [editFundType, setEditFundType] = useState('Savings');
+  const [editFundTarget, setEditFundTarget] = useState('');
+  const [newFundName, setNewFundName] = useState('');
+  const [newFundType, setNewFundType] = useState('Savings');
+  const [newFundTarget, setNewFundTarget] = useState('');
+  
   // holdings form state
   const [hName, setHName] = useState('');
   const [hType, setHType] = useState('Equity');
@@ -545,6 +556,160 @@ export default function AdminPanel({
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Admin Panel</h2>
+
+      {/* Fund Management Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">Fund Management</h3>
+        
+        {/* Add New Fund Form */}
+        <div className="border p-4 rounded space-y-2 mb-6 bg-blue-50">
+          <h5 className="font-medium text-blue-900">Add New Fund</h5>
+          <input 
+            className="w-full px-3 py-2 border rounded text-sm" 
+            placeholder="Fund Name" 
+            value={newFundName} 
+            onChange={(e)=>setNewFundName(e.target.value)} 
+          />
+          <select 
+            className="w-full px-3 py-2 border rounded text-sm"
+            value={newFundType}
+            onChange={(e)=>setNewFundType(e.target.value)}
+          >
+            <option value="Savings">Savings</option>
+            <option value="Emergency">Emergency</option>
+            <option value="Investment">Investment</option>
+            <option value="Education">Education</option>
+            <option value="Retirement">Retirement</option>
+            <option value="Other">Other</option>
+          </select>
+          <input 
+            className="w-full px-3 py-2 border rounded text-sm" 
+            placeholder="Target Total Value (RM)" 
+            type="number" 
+            step="0.01"
+            value={newFundTarget} 
+            onChange={(e)=>setNewFundTarget(e.target.value)} 
+          />
+          <button 
+            className="w-full px-3 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+            onClick={() => {
+              if (newFundName.trim() && newFundTarget && newFundTarget !== '') {
+                const newId = Math.max(...funds.map(f => f.id), 0) + 1;
+                setFunds([...funds, { 
+                  id: newId, 
+                  name: newFundName, 
+                  type: newFundType,
+                  targetValue: Number(newFundTarget) 
+                }]);
+                setNewFundName('');
+                setNewFundType('Savings');
+                setNewFundTarget('');
+              }
+            }}
+          >
+            + Add Fund
+          </button>
+        </div>
+
+        {/* Edit/View Funds */}
+        {editingFund ? (
+          <div className="border p-4 rounded space-y-2 mb-4 bg-yellow-50">
+            <h5 className="font-medium text-yellow-900">Edit Fund</h5>
+            <input 
+              className="w-full px-3 py-2 border rounded text-sm" 
+              placeholder="Fund Name" 
+              value={editFundName} 
+              onChange={(e)=>setEditFundName(e.target.value)} 
+            />
+            <select 
+              className="w-full px-3 py-2 border rounded text-sm"
+              value={editFundType}
+              onChange={(e)=>setEditFundType(e.target.value)}
+            >
+              <option value="Savings">Savings</option>
+              <option value="Emergency">Emergency</option>
+              <option value="Investment">Investment</option>
+              <option value="Education">Education</option>
+              <option value="Retirement">Retirement</option>
+              <option value="Other">Other</option>
+            </select>
+            <input 
+              className="w-full px-3 py-2 border rounded text-sm" 
+              placeholder="Target Total Value (RM)" 
+              type="number" 
+              step="0.01"
+              value={editFundTarget} 
+              onChange={(e)=>setEditFundTarget(e.target.value)} 
+            />
+            <div className="flex gap-2">
+              <button 
+                className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700" 
+                onClick={() => {
+                  if (editFundName.trim() && editFundTarget && editFundTarget !== '') {
+                    setFunds(funds.map(f => f.id === editingFund.id ? 
+                      { ...f, name: editFundName, type: editFundType, targetValue: Number(editFundTarget) } : f
+                    ));
+                    setEditingFund(null);
+                    setEditFundName('');
+                    setEditFundType('Savings');
+                    setEditFundTarget('');
+                  }
+                }}
+              >
+                ✓ Save
+              </button>
+              <button 
+                className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm font-medium hover:bg-gray-500" 
+                onClick={() => {
+                  setEditingFund(null);
+                  setEditFundName('');
+                  setEditFundType('Savings');
+                  setEditFundTarget('');
+                }}
+              >
+                ✕ Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {funds.length > 0 ? (
+              funds.map((fund) => (
+                <div key={fund.id} className="border p-3 rounded flex items-center justify-between bg-gray-50 hover:bg-gray-100">
+                  <div>
+                    <p className="font-medium">{fund.name}</p>
+                    <p className="text-xs text-gray-600 mb-1">Type: <span className="font-semibold">{fund.type}</span></p>
+                    <p className="text-sm text-gray-600">Target: RM {fund.targetValue.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button 
+                      className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                      onClick={() => {
+                        setEditingFund(fund);
+                        setEditFundName(fund.name);
+                        setEditFundType(fund.type);
+                        setEditFundTarget(fund.targetValue.toString());
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+                      onClick={() => {
+                        setFunds(funds.filter(f => f.id !== fund.id));
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm">No funds created yet.</p>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="font-semibold mb-4">Add Company</h3>

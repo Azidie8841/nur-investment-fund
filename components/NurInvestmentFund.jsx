@@ -232,7 +232,8 @@ const NurInvestmentFund = () => {
             { id: 'documents', name: 'Documents', icon: FileText }
           ]
         },
-        { id: 'savings', name: 'Savings', icon: DollarSign }
+        { id: 'savings', name: 'Savings', icon: DollarSign },
+        { id: 'reserve', name: 'Reserve', icon: Briefcase }
       ]
     },
     { id: 'plans', name: 'Strategic Plans', icon: Target },
@@ -1980,6 +1981,147 @@ const NurInvestmentFund = () => {
     );
   };
 
+  const ReserveView = () => {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Total Reserve</p>
+                <p className="text-3xl font-bold text-blue-600">RM 250,000</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Emergency and contingency fund</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Monthly Allocation</p>
+                <p className="text-3xl font-bold text-green-600">RM 5,000</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Regular contribution to reserve</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Coverage Ratio</p>
+                <p className="text-3xl font-bold text-purple-600">8.5 months</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Operating expenses coverage</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Reserve Allocation by Type</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">Cash & Liquid Assets</p>
+                  <p className="text-sm text-gray-600">Immediate access funds</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">RM 100,000</p>
+                <p className="text-sm text-gray-600">40%</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">Money Market Funds</p>
+                  <p className="text-sm text-gray-600">Short-term fixed income</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">RM 100,000</p>
+                <p className="text-sm text-gray-600">40%</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">Bonds & Fixed Income</p>
+                  <p className="text-sm text-gray-600">Medium-term stable returns</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">RM 50,000</p>
+                <p className="text-sm text-gray-600">20%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Reserve Maintenance Schedule</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-medium">Date</th>
+                  <th className="text-left py-3 px-4 font-medium">Type</th>
+                  <th className="text-left py-3 px-4 font-medium">Description</th>
+                  <th className="text-right py-3 px-4 font-medium">Amount</th>
+                  <th className="text-left py-3 px-4 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">Dec 01, 2025</td>
+                  <td className="py-3 px-4">Contribution</td>
+                  <td className="py-3 px-4">Monthly allocation</td>
+                  <td className="py-3 px-4 text-right font-medium">+RM 5,000</td>
+                  <td className="py-3 px-4"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Completed</span></td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">Nov 01, 2025</td>
+                  <td className="py-3 px-4">Contribution</td>
+                  <td className="py-3 px-4">Monthly allocation</td>
+                  <td className="py-3 px-4 text-right font-medium">+RM 5,000</td>
+                  <td className="py-3 px-4"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Completed</span></td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">Oct 15, 2025</td>
+                  <td className="py-3 px-4">Reallocation</td>
+                  <td className="py-3 px-4">Portfolio rebalancing</td>
+                  <td className="py-3 px-4 text-right font-medium">-RM 2,500</td>
+                  <td className="py-3 px-4"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Completed</span></td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="py-3 px-4">Oct 01, 2025</td>
+                  <td className="py-3 px-4">Contribution</td>
+                  <td className="py-3 px-4">Monthly allocation</td>
+                  <td className="py-3 px-4 text-right font-medium">+RM 5,000</td>
+                  <td className="py-3 px-4"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Completed</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPlans = () => {
     // Show theme detail page if a theme is selected
     if (viewingThemeId !== null) {
@@ -2304,6 +2446,8 @@ const NurInvestmentFund = () => {
         return <DocumentsView />;
       case 'savings':
         return <SavingsView />;
+      case 'reserve':
+        return <ReserveView />;
       case 'plans':
         return renderPlans();
       default:

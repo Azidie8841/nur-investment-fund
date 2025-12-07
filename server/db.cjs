@@ -563,20 +563,11 @@ const createStrategicPlansTableSafely = () => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS strategic_plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        plan_id INTEGER,
         name TEXT NOT NULL,
         timeframe TEXT NOT NULL,
-        description TEXT,
-        status TEXT DEFAULT 'active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    
-    // Create index for faster queries
-    db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_strategic_plans_id 
-      ON strategic_plans(plan_id)
     `);
     
     console.log('✓ Strategic plans table ready');

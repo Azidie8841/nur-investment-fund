@@ -241,13 +241,13 @@ app.get('/api/savings-records', (req, res) => {
 
 app.post('/api/savings-records', (req, res) => {
   try {
-    const { amount, record_date, notes, instrument_type, platform } = req.body;
+    const { amount, record_date, notes } = req.body;
     const stmt = db.prepare(`
-      INSERT INTO savings_records (amount, record_date, notes, instrument_type, platform)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO savings_records (amount, record_date, notes)
+      VALUES (?, ?, ?)
     `);
-    const result = stmt.run(amount, record_date, notes, instrument_type || 'Cash', platform || null);
-    res.json({ id: result.lastInsertRowid, amount, record_date, notes, instrument_type, platform });
+    const result = stmt.run(amount, record_date, notes);
+    res.json({ id: result.lastInsertRowid, amount, record_date, notes });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -256,14 +256,14 @@ app.post('/api/savings-records', (req, res) => {
 app.put('/api/savings-records/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, record_date, notes, instrument_type, platform } = req.body;
+    const { amount, record_date, notes } = req.body;
     const stmt = db.prepare(`
       UPDATE savings_records 
-      SET amount = ?, record_date = ?, notes = ?, instrument_type = ?, platform = ?
+      SET amount = ?, record_date = ?, notes = ?
       WHERE id = ?
     `);
-    stmt.run(amount, record_date || new Date().toISOString(), notes || null, instrument_type || 'Cash', platform || null, id);
-    res.json({ success: true, id, amount, record_date, notes, instrument_type, platform });
+    stmt.run(amount, record_date || new Date().toISOString(), notes || null, id);
+    res.json({ success: true, id, amount, record_date, notes });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -808,6 +808,45 @@ app.delete('/api/strategic-plans/:id', (req, res) => {
     plans = plans.filter(p => p.id !== parseInt(id));
     writePlans(plans);
     res.json({ success: true, id: parseInt(id) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Email Report Routes =====
+const { generateSavingsEmailReport, generateInvestmentEmailReport } = require('./email-report-service.cjs');
+
+app.get('/api/reports/savings-email', (req, res) => {
+  try {
+    const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
+    const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    
+    const htmlReport = generateSavingsEmailReport(records, totalSavings, 'Savings Records Report');
+    
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="savings-report.html"');
+    res.send(htmlReport);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/reports/investments-email', (req, res) => {
+  try {
+    const equities = db.prepare('SELECT * FROM equities_companies').all();
+    const bonds = db.prepare('SELECT * FROM fixed_income_bonds').all();
+    const alternatives = db.prepare('SELECT * FROM alternative_investments').all();
+    
+    const equitiesTotal = equities.reduce((sum, e) => sum + (e.value || 0), 0);
+    const bondsTotal = bonds.reduce((sum, b) => sum + (b.value || 0), 0);
+    const altTotal = alternatives.reduce((sum, a) => sum + (a.current_value || 0), 0);
+    const totalValue = equitiesTotal + bondsTotal + altTotal;
+    
+    const htmlReport = generateInvestmentEmailReport(equities, bonds, alternatives, totalValue);
+    
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="investment-report.html"');
+    res.send(htmlReport);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

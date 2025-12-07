@@ -1,0 +1,352 @@
+{
+  "timestamp": "2025-12-07T15:44:10.264Z",
+  "deploymentId": "deployment_2025-12-07T15-44-10-254",
+  "tables": {
+    "equities_companies": {
+      "count": 4,
+      "data": [
+        {
+          "id": 1,
+          "name": "Equity ETF",
+          "value": 250000,
+          "sector": "ETF",
+          "ownership": "—",
+          "country": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 2,
+          "name": "Apple",
+          "value": 150000,
+          "sector": "Technology",
+          "ownership": "—",
+          "country": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 3,
+          "name": "NVIDIA",
+          "value": 120000,
+          "sector": "Technology",
+          "ownership": "—",
+          "country": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 4,
+          "name": "SPUS ETF",
+          "value": 120000,
+          "sector": "ETF",
+          "ownership": "—",
+          "country": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        }
+      ]
+    },
+    "fixed_income_bonds": {
+      "count": 1,
+      "data": [
+        {
+          "id": 1,
+          "name": "TEST",
+          "value": 33.24324324324324,
+          "bond_type": "Government",
+          "rating": "AAA",
+          "maturity_date": "2025-12-05",
+          "country": "MALAYSIA",
+          "created_at": "2025-12-05 05:30:52",
+          "updated_at": "2025-12-05 05:30:52"
+        }
+      ]
+    },
+    "alternative_investments": {
+      "count": 1,
+      "data": [
+        {
+          "id": 1,
+          "name": "Bitocin",
+          "asset_type": "crypto",
+          "platform": null,
+          "quantity": 0.01,
+          "unit_price": null,
+          "current_value": 200,
+          "cost": null,
+          "notes": "bitcoin",
+          "created_at": "2025-12-05 07:05:08",
+          "updated_at": "2025-12-05 07:05:08"
+        }
+      ]
+    },
+    "asset_monthly_data": {
+      "count": 4,
+      "data": [
+        {
+          "id": 1,
+          "asset_name": "Equity ETF",
+          "jan": 0,
+          "feb": 0,
+          "mar": 0,
+          "apr": 0,
+          "may": 0,
+          "jun": 0,
+          "jul": 0,
+          "aug": 0,
+          "sep": 0,
+          "oct": 0,
+          "nov": 0,
+          "dec": 0,
+          "incorporated": "ALL",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 13:15:11"
+        },
+        {
+          "id": 2,
+          "asset_name": "Apple",
+          "jan": 0,
+          "feb": 0,
+          "mar": 0,
+          "apr": 0,
+          "may": 0,
+          "jun": 0,
+          "jul": 0,
+          "aug": 0,
+          "sep": 0,
+          "oct": 0,
+          "nov": 0,
+          "dec": 73.15405405405406,
+          "incorporated": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 13:13:08"
+        },
+        {
+          "id": 3,
+          "asset_name": "NVIDIA",
+          "jan": 0,
+          "feb": 0,
+          "mar": 0,
+          "apr": 0,
+          "may": 0,
+          "jun": 0,
+          "jul": 0,
+          "aug": 0,
+          "sep": 0,
+          "oct": 0,
+          "nov": 0,
+          "dec": 44.23243243243243,
+          "incorporated": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 13:12:35"
+        },
+        {
+          "id": 4,
+          "asset_name": "SPUS ETF",
+          "jan": 0,
+          "feb": 0,
+          "mar": 0,
+          "apr": 0,
+          "may": 0,
+          "jun": 0,
+          "jul": 0,
+          "aug": 0,
+          "sep": 0,
+          "oct": 0,
+          "nov": 0,
+          "dec": 57.232432432432425,
+          "incorporated": "United States",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 13:10:23"
+        }
+      ]
+    },
+    "fixed_income_monthly_data": {
+      "count": 0,
+      "data": []
+    },
+    "alternative_investment_monthly_data": {
+      "count": 0,
+      "data": []
+    },
+    "savings_records": {
+      "count": 2,
+      "data": [
+        {
+          "id": 12,
+          "amount": 824.89,
+          "record_date": "2025-08-15",
+          "notes": "Baki Permulaan",
+          "created_at": "2025-12-07 15:37:46",
+          "updated_at": "2025-12-07 15:37:46"
+        },
+        {
+          "id": 13,
+          "amount": 716.25,
+          "record_date": "2025-08-16",
+          "notes": "Baki Permulaan",
+          "created_at": "2025-12-07 15:38:25",
+          "updated_at": "2025-12-07 15:38:25"
+        }
+      ]
+    },
+    "savings_goals": {
+      "count": 1,
+      "data": [
+        {
+          "id": 1,
+          "goal_name": "Dana kecemasan 6 bulan ",
+          "target_amount": 15366,
+          "target_date": "2031-12-31",
+          "status": "Active",
+          "description": "Long-term wealth accumulation",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-07 11:20:22"
+        }
+      ]
+    },
+    "user_profiles": {
+      "count": 3,
+      "data": [
+        {
+          "id": 1,
+          "name": "Family Member",
+          "email": "family@example.com",
+          "role": "admin",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 2,
+          "name": "Investor A",
+          "email": "investorA@example.com",
+          "role": "user",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 3,
+          "name": "Investor B",
+          "email": "investorB@example.com",
+          "role": "user",
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        }
+      ]
+    },
+    "performance_data": {
+      "count": 12,
+      "data": [
+        {
+          "id": 1,
+          "month": "Jan",
+          "value": 950000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 2,
+          "month": "Feb",
+          "value": 980000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 3,
+          "month": "Mar",
+          "value": 1020000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 4,
+          "month": "Apr",
+          "value": 1050000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 5,
+          "month": "May",
+          "value": 1080000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 6,
+          "month": "Jun",
+          "value": 1150000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 7,
+          "month": "Jul",
+          "value": 1200000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 8,
+          "month": "Aug",
+          "value": 1180000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 9,
+          "month": "Sep",
+          "value": 1250000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 10,
+          "month": "Oct",
+          "value": 1320000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 11,
+          "month": "Nov",
+          "value": 1380000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        },
+        {
+          "id": 12,
+          "month": "Dec",
+          "value": 1450000,
+          "created_at": "2025-12-05 05:22:38",
+          "updated_at": "2025-12-05 05:22:38"
+        }
+      ]
+    },
+    "strategic_plans": {
+      "count": 1,
+      "data": [
+        {
+          "id": 1,
+          "name": "RANCANGAN NUR' KE - 1",
+          "timeframe": "2026-2030",
+          "created_at": "2025-12-06 16:27:49",
+          "updated_at": "2025-12-06 16:27:49"
+        }
+      ]
+    },
+    "bond_annual_dividends": {
+      "count": 0,
+      "data": []
+    },
+    "bond_monthly_dividends": {
+      "count": 0,
+      "data": []
+    },
+    "bond_monthly_values": {
+      "count": 0,
+      "data": []
+    }
+  }
+}

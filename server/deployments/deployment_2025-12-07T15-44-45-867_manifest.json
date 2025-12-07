@@ -1,0 +1,20 @@
+{
+  "deploymentId": "deployment_2025-12-07T15-44-45-867",
+  "timestamp": "2025-12-07T15:44:46.649Z",
+  "status": "PRE-DEPLOYMENT_BACKUP_COMPLETE",
+  "backupFiles": {
+    "database": "nur_fund_backup_2025-12-07T15-44-45-867.db",
+    "dataExport": "deployment_2025-12-07T15-44-45-867_data_export.json",
+    "schema": "deployment_2025-12-07T15-44-45-867_schema.json",
+    "statistics": "deployment_2025-12-07T15-44-45-867_stats.json",
+    "gitInfo": "deployment_2025-12-07T15-44-45-867_git_info.json",
+    "rollback": "deployment_2025-12-07T15-44-45-867_rollback.sh"
+  },
+  "summary": {
+    "totalRecords": 29,
+    "totalTables": 14,
+    "databaseSize": "0.12 MB",
+    "branch": "feature/cash-improvements",
+    "commitHash": "fe4b5d0d7d9999d77456f2fe594557bd2afe3f0e"
+  }
+}

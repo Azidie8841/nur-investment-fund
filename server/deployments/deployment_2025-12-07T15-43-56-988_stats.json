@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-12-07T15:43:57.028Z",
+  "deploymentId": "deployment_2025-12-07T15-43-56-988",
+  "database": {
+    "path": "C:\\Users\\User\\Desktop\\src\\server\\nur_fund.db",
+    "size": "0.12 MB"
+  },
+  "tableStats": {
+    "equities_companies": 4,
+    "fixed_income_bonds": 1,
+    "alternative_investments": 1,
+    "asset_monthly_data": 4,
+    "fixed_income_monthly_data": 0,
+    "alternative_investment_monthly_data": 0,
+    "savings_records": 2,
+    "savings_goals": 1,
+    "user_profiles": 3,
+    "performance_data": 12,
+    "strategic_plans": 1,
+    "bond_annual_dividends": 0,
+    "bond_monthly_dividends": 0,
+    "bond_monthly_values": 0
+  },
+  "totals": {
+    "tables": 14,
+    "records": 29
+  }
+}
