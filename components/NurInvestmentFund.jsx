@@ -1199,6 +1199,91 @@ const NurInvestmentFund = () => {
         </div>
 
         <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Fund Allocation Strategy</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Index Funds & ETF */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Index Funds & ETF</h4>
+                  <p className="text-xs text-gray-600 mt-1">Diversified tracking funds</p>
+                </div>
+                <span className="text-2xl">📊</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <p className="text-3xl font-bold text-blue-600">70%</p>
+                <p className="text-xs text-gray-600 mt-2">Target allocation</p>
+                <div className="mt-3">
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{width: '70%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dividend Stocks */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Dividend Stocks</h4>
+                  <p className="text-xs text-gray-600 mt-1">Income-producing shares</p>
+                </div>
+                <span className="text-2xl">💰</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-green-200">
+                <p className="text-3xl font-bold text-green-600">15%</p>
+                <p className="text-xs text-gray-600 mt-2">Target allocation</p>
+                <div className="mt-3">
+                  <div className="w-full bg-green-200 rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full" style={{width: '15%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Magnificent 7 Stocks */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Magnificent 7</h4>
+                  <p className="text-xs text-gray-600 mt-1">Large-cap tech leaders</p>
+                </div>
+                <span className="text-2xl">🚀</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-purple-200">
+                <p className="text-3xl font-bold text-purple-600">10%</p>
+                <p className="text-xs text-gray-600 mt-2">Target allocation</p>
+                <div className="mt-3">
+                  <div className="w-full bg-purple-200 rounded-full h-2">
+                    <div className="bg-purple-600 h-2 rounded-full" style={{width: '10%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Growth Stocks */}
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Growth Stocks</h4>
+                  <p className="text-xs text-gray-600 mt-1">Emerging high-growth</p>
+                </div>
+                <span className="text-2xl">📈</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-orange-200">
+                <p className="text-3xl font-bold text-orange-600">5%</p>
+                <p className="text-xs text-gray-600 mt-2">Target allocation</p>
+                <div className="mt-3">
+                  <div className="w-full bg-orange-200 rounded-full h-2">
+                    <div className="bg-orange-600 h-2 rounded-full" style={{width: '5%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Companies (8,314)</h3>
             <input 
@@ -1252,7 +1337,10 @@ const NurInvestmentFund = () => {
               <XAxis dataKey="year" />
               <YAxis />
               <Tooltip 
-                formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                formatter={(value) => {
+                  const formatted = (value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  return `RM ${formatted}`;
+                }}
                 labelFormatter={(label) => `Year: ${label}`}
               />
               <Bar dataKey="value" fill="#1e40af" />
@@ -1349,7 +1437,10 @@ const NurInvestmentFund = () => {
               <XAxis dataKey="year" />
               <YAxis />
               <Tooltip 
-                formatter={(value) => `RM ${(value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                formatter={(value) => {
+                  const formatted = (value * 3.7).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  return `RM ${formatted}`;
+                }}
                 labelFormatter={(label) => `Year: ${label}`}
               />
               <Bar dataKey="value" fill="#10b981" />
