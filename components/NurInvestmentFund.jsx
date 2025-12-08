@@ -44,6 +44,7 @@ const NurInvestmentFund = () => {
   const [viewingThemeId, setViewingThemeId] = useState(null);
   const [editingTheme, setEditingTheme] = useState(null);
   const [themeDetails, setThemeDetails] = useState({});
+  const [expandedTarget, setExpandedTarget] = useState(null);
 
   // Load data from API on component mount
   useEffect(() => {
@@ -1583,9 +1584,9 @@ const NurInvestmentFund = () => {
             </div>
           </div>
           <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
-            <div className="bg-cyan-500 h-2 rounded-full" style={{width: `${((calculateTotalSavingsValue() / totalAssets) * 100)}%`}}></div>
+            <div className="bg-cyan-500 h-2 rounded-full" style={{width: `${((calculateTotalSavingsValue() / (savingsGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0) || 1)) * 100)}%`}}></div>
           </div>
-          <p className="text-xs text-slate-400 text-center font-semibold">{((calculateTotalSavingsValue() / totalAssets) * 100).toFixed(1)}%</p>
+          <p className="text-xs text-slate-400 text-center font-semibold">{((calculateTotalSavingsValue() / (savingsGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0) || 1)) * 100).toFixed(1)}%</p>
           <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-xl">→</span>
         </div>
       </div>
@@ -2275,20 +2276,97 @@ const NurInvestmentFund = () => {
                 {/* Content Table */}
                 <div className="space-y-4">
                   {[
-                    { id: 'A1T1', desc: 'Pembekalan 220,000 unit Rumah Mampu Milik menjelang tahun 2030' },
-                    { id: 'A1T2', desc: '3,000 keluarga mendapat faedah daripada kewujudan skim perumahan urban menjelang tahun 2030' },
-                    { id: 'A1T3', desc: 'Pembekalan 22,000 unit sewa beli menjelang tahun 2030' }
-                  ].map((item) => (
-                    <div key={item.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-blue-300 hover:shadow transition cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold text-gray-800 min-w-20">{item.id}</span>
-                          <span className="text-gray-700">{item.desc}</span>
+                    { id: 'A1T1', desc: 'Pembekalan 220,000 unit Rumah Mampu Milik menjelang tahun 2030', goalName: 'Dana kecemasan 6 bulan' },
+                    { id: 'A1T2', desc: '3,000 keluarga mendapat faedah daripada kewujudan skim perumahan urban menjelang tahun 2030', goalName: null },
+                    { id: 'A1T3', desc: 'Pembekalan 22,000 unit sewa beli menjelang tahun 2030', goalName: null }
+                  ].map((item) => {
+                    const isExpanded = expandedTarget === item.id;
+                    const matchingGoal = savingsGoals.find(g => g.goal_name === item.goalName);
+                    const currentAmount = matchingGoal 
+                      ? savingsRecords.reduce((sum, record) => sum + (record.amount || 0), 0)
+                      : 0;
+                    const targetAmount = matchingGoal ? (matchingGoal.target_amount || 0) : 0;
+                    const progressPercent = targetAmount > 0 ? Math.round((currentAmount / targetAmount) * 100) : 0;
+                    
+                    return (
+                      <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div 
+                          className="bg-gray-50 p-4 border-b border-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                          onClick={() => setExpandedTarget(isExpanded ? null : item.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <span className="font-bold text-gray-800 min-w-20">{item.id}</span>
+                              <span className="text-gray-700">{item.desc}</span>
+                            </div>
+                            <span className={`text-gray-400 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}>↓</span>
+                          </div>
                         </div>
-                        <span className="text-gray-400">↓</span>
+                        
+                        {/* Expanded Content - Table */}
+                        {isExpanded && (
+                          <div className="p-4 bg-white">
+                            {matchingGoal ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div className="bg-blue-50 p-3 rounded">
+                                    <p className="text-xs text-gray-600 mb-1">Target Amount</p>
+                                    <p className="text-lg font-bold text-blue-600">RM {targetAmount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                  </div>
+                                  <div className="bg-green-50 p-3 rounded">
+                                    <p className="text-xs text-gray-600 mb-1">Current Savings</p>
+                                    <p className="text-lg font-bold text-green-600">RM {currentAmount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="mb-3">
+                                  <div className="flex justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700">Progress</span>
+                                    <span className="text-sm font-bold text-gray-800">{progressPercent}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-blue-600 h-3 rounded-full transition-all" 
+                                      style={{ width: `${progressPercent}%` }}
+                                    ></div>
+                                  </div>
+                                  <p className="text-xs text-gray-600 mt-2">
+                                    {targetAmount > currentAmount 
+                                      ? `RM ${(targetAmount - currentAmount).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining to reach target`
+                                      : 'Target achieved! ✓'
+                                    }
+                                  </p>
+                                </div>
+                                
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-50 border-t border-b border-gray-200">
+                                    <tr>
+                                      <th className="text-left py-2 px-3 font-semibold text-gray-700">Tajuk Projek</th>
+                                      <th className="text-right py-2 px-3 font-semibold text-gray-700">Progress</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr className="border-b border-gray-200 hover:bg-gray-50">
+                                      <td className="py-2 px-3 text-gray-700">{item.goalName}</td>
+                                      <td className="py-2 px-3 text-right">
+                                        <span className={`px-2 py-1 rounded text-xs font-semibold ${progressPercent >= 100 ? 'bg-green-100 text-green-700' : progressPercent >= 50 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                          {progressPercent}%
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="p-4 text-center text-gray-500 text-sm">
+                                No linked savings goal found for this target.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

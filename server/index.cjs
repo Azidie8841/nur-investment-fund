@@ -13,8 +13,13 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize database
-initializeDb();
+// Initialize database with error handling
+try {
+  initializeDb();
+} catch (error) {
+  console.error('⚠️  Database initialization error:', error.message);
+  // Continue running despite initialization error
+}
 
 // ===== Equities Companies Routes =====
 app.get('/api/equities-companies', (req, res) => {
@@ -926,9 +931,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server running' });
 });
 
-// Add global error handler
+// Add global error handlers
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  console.error('⚠️  Uncaught Exception:', error.message);
+  // Don't exit - keep server running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️  Unhandled Rejection:', reason);
+  // Don't exit - keep server running
 });
 
 app.listen(PORT, () => {

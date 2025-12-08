@@ -16,21 +16,25 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('⚠️  Gmail connection failed');
-    console.log('   Error:', error.message);
-    console.log('   Make sure to:');
-    console.log('   1. Enable 2-Factor Authentication on your Gmail account');
-    console.log('   2. Generate an App Password: https://myaccount.google.com/apppasswords');
-    console.log('   3. Set environment variables:');
-    console.log('      - GMAIL_USER=your-email@gmail.com');
-    console.log('      - GMAIL_APP_PASSWORD=your-16-char-password');
-  } else {
-    console.log('✓ Gmail SMTP connection ready');
-  }
-});
+// Verify connection configuration (non-blocking)
+try {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.log('⚠️  Gmail connection failed');
+      console.log('   Error:', error.message);
+      console.log('   Make sure to:');
+      console.log('   1. Enable 2-Factor Authentication on your Gmail account');
+      console.log('   2. Generate an App Password: https://myaccount.google.com/apppasswords');
+      console.log('   3. Set environment variables:');
+      console.log('      - GMAIL_USER=your-email@gmail.com');
+      console.log('      - GMAIL_APP_PASSWORD=your-16-char-password');
+    } else {
+      console.log('✓ Gmail SMTP connection ready');
+    }
+  });
+} catch (err) {
+  console.log('⚠️  Gmail configuration skipped (optional feature)');
+}
 
 module.exports = transporter;
 
