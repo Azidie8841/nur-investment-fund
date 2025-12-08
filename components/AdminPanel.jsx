@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData } from '../utils/api';
+import React, { useState, useEffect } from 'react';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
@@ -97,6 +97,22 @@ export default function AdminPanel({
   const [altQuantity, setAltQuantity] = useState('');
   const [altUnit, setAltUnit] = useState('');
   const [altNotes, setAltNotes] = useState('');
+
+  // Load funds from database on component mount
+  useEffect(() => {
+    const loadFunds = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/funds');
+        if (response.ok) {
+          const data = await response.json();
+          setFunds(data);
+        }
+      } catch (error) {
+        console.error('Failed to load funds:', error);
+      }
+    };
+    loadFunds();
+  }, []);
 
   // simple helpers
   const addCompany = async (e) => {
@@ -592,18 +608,34 @@ export default function AdminPanel({
           />
           <button 
             className="w-full px-3 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
-            onClick={() => {
+            onClick={async () => {
               if (newFundName.trim() && newFundTarget && newFundTarget !== '') {
-                const newId = Math.max(...funds.map(f => f.id), 0) + 1;
-                setFunds([...funds, { 
-                  id: newId, 
-                  name: newFundName, 
-                  type: newFundType,
-                  targetValue: Number(newFundTarget) 
-                }]);
-                setNewFundName('');
-                setNewFundType('Savings');
-                setNewFundTarget('');
+                try {
+                  const response = await fetch('http://localhost:5000/api/funds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: newFundName,
+                      type: newFundType,
+                      target_value: Number(newFundTarget),
+                      current_value: 0,
+                      description: ''
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    const newFund = await response.json();
+                    setFunds([...funds, newFund]);
+                    setNewFundName('');
+                    setNewFundType('Savings');
+                    setNewFundTarget('');
+                    alert('Fund created successfully!');
+                  } else {
+                    alert('Failed to create fund');
+                  }
+                } catch (error) {
+                  alert('Error creating fund: ' + error.message);
+                }
               }
             }}
           >
@@ -644,15 +676,36 @@ export default function AdminPanel({
             <div className="flex gap-2">
               <button 
                 className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700" 
-                onClick={() => {
+                onClick={async () => {
                   if (editFundName.trim() && editFundTarget && editFundTarget !== '') {
-                    setFunds(funds.map(f => f.id === editingFund.id ? 
-                      { ...f, name: editFundName, type: editFundType, targetValue: Number(editFundTarget) } : f
-                    ));
-                    setEditingFund(null);
-                    setEditFundName('');
-                    setEditFundType('Savings');
-                    setEditFundTarget('');
+                    try {
+                      const response = await fetch(`http://localhost:5000/api/funds/${editingFund.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          name: editFundName,
+                          type: editFundType,
+                          target_value: Number(editFundTarget),
+                          current_value: editingFund.current_value || 0,
+                          description: editingFund.description || '',
+                          status: editingFund.status || 'Active'
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const updatedFund = await response.json();
+                        setFunds(funds.map(f => f.id === editingFund.id ? updatedFund : f));
+                        setEditingFund(null);
+                        setEditFundName('');
+                        setEditFundType('Savings');
+                        setEditFundTarget('');
+                        alert('Fund updated successfully!');
+                      } else {
+                        alert('Failed to update fund');
+                      }
+                    } catch (error) {
+                      alert('Error updating fund: ' + error.message);
+                    }
                   }
                 }}
               >
@@ -679,7 +732,7 @@ export default function AdminPanel({
                   <div>
                     <p className="font-medium">{fund.name}</p>
                     <p className="text-xs text-gray-600 mb-1">Type: <span className="font-semibold">{fund.type}</span></p>
-                    <p className="text-sm text-gray-600">Target: RM {fund.targetValue.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <p className="text-sm text-gray-600">Target: RM {(fund.target_value || fund.targetValue).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                   </div>
                   <div className="flex gap-1">
                     <button 
@@ -688,15 +741,28 @@ export default function AdminPanel({
                         setEditingFund(fund);
                         setEditFundName(fund.name);
                         setEditFundType(fund.type);
-                        setEditFundTarget(fund.targetValue.toString());
+                        setEditFundTarget((fund.target_value || fund.targetValue).toString());
                       }}
                     >
                       Edit
                     </button>
                     <button 
                       className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
-                      onClick={() => {
-                        setFunds(funds.filter(f => f.id !== fund.id));
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`http://localhost:5000/api/funds/${fund.id}`, {
+                            method: 'DELETE'
+                          });
+                          
+                          if (response.ok) {
+                            setFunds(funds.filter(f => f.id !== fund.id));
+                            alert('Fund deleted successfully!');
+                          } else {
+                            alert('Failed to delete fund');
+                          }
+                        } catch (error) {
+                          alert('Error deleting fund: ' + error.message);
+                        }
                       }}
                     >
                       Delete

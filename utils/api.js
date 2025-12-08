@@ -665,3 +665,78 @@ export const deleteStrategicPlan = async (id) => {
     throw error;
   }
 };
+
+// Fund Management CRUD
+export const fetchFunds = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/funds`);
+    const data = await handleResponse(res);
+    console.log('Fetched funds:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching funds:', error);
+    throw error;
+  }
+};
+
+export const addFund = async (fund) => {
+  try {
+    const res = await fetch(`${API_BASE}/funds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fund)
+    });
+    const data = await handleResponse(res);
+    console.log('Added fund:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding fund:', error);
+    throw error;
+  }
+};
+
+export const updateFund = async (id, fund) => {
+  try {
+    const res = await fetch(`${API_BASE}/funds/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fund)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated fund:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating fund:', error);
+    throw error;
+  }
+};
+
+export const deleteFund = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/funds/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted fund:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting fund:', error);
+    throw error;
+  }
+};
+
+export const updateFundValue = async (id, current_value) => {
+  try {
+    const res = await fetch(`${API_BASE}/funds/${id}/value`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_value })
+    });
+    const data = await handleResponse(res);
+    console.log('Updated fund value:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating fund value:', error);
+    throw error;
+  }
+};
