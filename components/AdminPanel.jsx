@@ -39,6 +39,13 @@ export default function AdminPanel({
   const [aValue, setAValue] = useState('');
   const [aColor, setAColor] = useState('#3b82f6');
 
+  // allocation percentage state
+  const [allocationPercentages, setAllocationPercentages] = useState({
+    equities: 60,
+    fixedIncome: 30,
+    alternatives: 10
+  });
+
   // company form
   const [cName, setCName] = useState('');
   const [cValue, setCValue] = useState('');
@@ -775,6 +782,202 @@ export default function AdminPanel({
             )}
           </div>
         )}
+      </div>
+
+      {/* Asset Allocation Percentage Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-semibold mb-4">🎯 Asset Allocation Strategy</h3>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
+          <p className="text-sm text-blue-900 mb-2 font-medium">Set your target allocation percentages for all investment types:</p>
+          
+          <div className="space-y-4">
+            {/* Equities Allocation */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">📈 Equities (Stocks & Companies)</label>
+                <span className="text-lg font-bold text-blue-600">{allocationPercentages.equities}%</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.equities}
+                  onChange={(e) => {
+                    const newValue = Number(e.target.value);
+                    const remaining = 100 - newValue;
+                    if (remaining >= 0) {
+                      setAllocationPercentages({
+                        ...allocationPercentages,
+                        equities: newValue
+                      });
+                    }
+                  }}
+                  className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.equities}
+                  onChange={(e) => {
+                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
+                    setAllocationPercentages({
+                      ...allocationPercentages,
+                      equities: newValue
+                    });
+                  }}
+                  className="w-16 px-2 py-1 border rounded text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Fixed Income Allocation */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">🏦 Fixed Income (Bonds & Interest)</label>
+                <span className="text-lg font-bold text-green-600">{allocationPercentages.fixedIncome}%</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.fixedIncome}
+                  onChange={(e) => {
+                    const newValue = Number(e.target.value);
+                    const remaining = 100 - newValue;
+                    if (remaining >= 0) {
+                      setAllocationPercentages({
+                        ...allocationPercentages,
+                        fixedIncome: newValue
+                      });
+                    }
+                  }}
+                  className="flex-1 h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.fixedIncome}
+                  onChange={(e) => {
+                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
+                    setAllocationPercentages({
+                      ...allocationPercentages,
+                      fixedIncome: newValue
+                    });
+                  }}
+                  className="w-16 px-2 py-1 border rounded text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Alternatives Allocation */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">💎 Alternatives (Crypto, Gold, etc.)</label>
+                <span className="text-lg font-bold text-purple-600">{allocationPercentages.alternatives}%</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.alternatives}
+                  onChange={(e) => {
+                    const newValue = Number(e.target.value);
+                    const remaining = 100 - newValue;
+                    if (remaining >= 0) {
+                      setAllocationPercentages({
+                        ...allocationPercentages,
+                        alternatives: newValue
+                      });
+                    }
+                  }}
+                  className="flex-1 h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={allocationPercentages.alternatives}
+                  onChange={(e) => {
+                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
+                    setAllocationPercentages({
+                      ...allocationPercentages,
+                      alternatives: newValue
+                    });
+                  }}
+                  className="w-16 px-2 py-1 border rounded text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Total Allocation Display */}
+            <div className="border-t pt-3 mt-3">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-gray-700">Total Allocation:</span>
+                <span className={`text-lg font-bold ${allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives === 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                  {allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives}%
+                </span>
+              </div>
+              {allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives !== 100 && (
+                <p className="text-xs text-orange-600 mt-1">⚠️ Total should equal 100% for balanced allocation</p>
+              )}
+            </div>
+
+            {/* Visual Allocation Chart */}
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Allocation Overview:</p>
+              <div className="flex h-8 rounded-lg overflow-hidden gap-0.5 bg-gray-100 p-0.5">
+                <div 
+                  style={{width: `${allocationPercentages.equities}%`}}
+                  className="bg-blue-500 rounded flex items-center justify-center"
+                >
+                  {allocationPercentages.equities > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.equities}%</span>}
+                </div>
+                <div 
+                  style={{width: `${allocationPercentages.fixedIncome}%`}}
+                  className="bg-green-500 rounded flex items-center justify-center"
+                >
+                  {allocationPercentages.fixedIncome > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.fixedIncome}%</span>}
+                </div>
+                <div 
+                  style={{width: `${allocationPercentages.alternatives}%`}}
+                  className="bg-purple-500 rounded flex items-center justify-center"
+                >
+                  {allocationPercentages.alternatives > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.alternatives}%</span>}
+                </div>
+              </div>
+              <div className="flex gap-4 mt-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                  <span>Equities</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
+                  <span>Fixed Income</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                  <span>Alternatives</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <p className="font-medium text-amber-900 mb-1">💡 Tips:</p>
+          <ul className="text-amber-800 text-xs space-y-1 list-disc list-inside">
+            <li>Conservative: 70% Fixed Income, 20% Equities, 10% Alternatives</li>
+            <li>Balanced: 60% Equities, 30% Fixed Income, 10% Alternatives</li>
+            <li>Aggressive: 80% Equities, 15% Fixed Income, 5% Alternatives</li>
+            <li>Adjust based on your risk tolerance and investment goals</li>
+          </ul>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
