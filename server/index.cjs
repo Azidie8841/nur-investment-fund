@@ -824,6 +824,7 @@ app.delete('/api/strategic-plans/:id', (req, res) => {
 // ===== Email Report Routes =====
 const { generateSavingsEmailReport, generateInvestmentEmailReport } = require('./email-report-service.cjs');
 const transporter = require('./email-config.cjs');
+const { sendSavingsReportViaWhatsApp } = require('./whatsapp-service.cjs');
 
 app.post('/api/reports/savings-email', async (req, res) => {
   try {
@@ -879,6 +880,56 @@ app.post('/api/reports/savings-email', async (req, res) => {
     } else if (error.message.includes('GMAIL_USER') || !process.env.GMAIL_USER) {
       setupInstructions = 'Gmail is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD environment variables';
       errorMessage = 'Gmail configuration missing.';
+    }
+    
+    res.status(500).setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ 
+      success: false, 
+      error: errorMessage,
+      instructions: setupInstructions || 'Check server logs for details'
+    }));
+  }
+});
+
+// WhatsApp Report Endpoint
+app.post('/api/reports/savings-whatsapp', async (req, res) => {
+  try {
+    console.log('📱 WhatsApp report request received');
+    
+    const records = db.prepare('SELECT * FROM savings_records ORDER BY record_date DESC').all();
+    console.log('✓ Retrieved', records.length, 'records from database');
+    
+    const totalSavings = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    console.log('✓ Total savings calculated:', totalSavings);
+    
+    // Send via WhatsApp
+    await sendSavingsReportViaWhatsApp(records, totalSavings);
+    console.log('✓ WhatsApp message sent successfully');
+    
+    const response = { 
+      success: true, 
+      message: 'WhatsApp report sent successfully!',
+      recordCount: records.length,
+      totalSavings: totalSavings,
+      sentVia: 'WhatsApp',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('✓ Sending success response');
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).send(JSON.stringify(response));
+    console.log('✓ Response sent');
+  } catch (error) {
+    console.error('❌ Error in WhatsApp report endpoint:', error.message);
+    console.error('Stack:', error.stack);
+    
+    let errorMessage = error.message;
+    let setupInstructions = '';
+    
+    // Check for specific Twilio errors
+    if (error.message.includes('Twilio')) {
+      setupInstructions = 'Install Twilio: npm install twilio, then configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER, WHATSAPP_RECIPIENT_NUMBER';
+      errorMessage = 'Twilio/WhatsApp not configured or not installed.';
     }
     
     res.status(500).setHeader('Content-Type', 'application/json');

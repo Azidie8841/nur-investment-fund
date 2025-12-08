@@ -1921,44 +1921,84 @@ const NurInvestmentFund = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Savings Records</h3>
-            <button
-              onClick={() => {
-                fetch('http://localhost:5000/api/reports/savings-email', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({})
-                })
-                .then(async res => {
-                  const text = await res.text();
-                  console.log('Response status:', res.status);
-                  console.log('Response text:', text);
-                  
-                  if (!text) {
-                    throw new Error(`Empty response from server (status: ${res.status})`);
-                  }
-                  try {
-                    return JSON.parse(text);
-                  } catch (e) {
-                    throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
-                  }
-                })
-                .then(data => {
-                  console.log('Parsed data:', data);
-                  if (data.success) {
-                    alert('Email report sent successfully!\n' + data.message);
-                  } else {
-                    alert('Failed to send email report: ' + (data.error || 'Unknown error'));
-                  }
-                })
-                .catch(err => {
-                  console.error('Fetch error:', err);
-                  alert('Error sending email: ' + err.message);
-                });
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-            >
-              Send Email Report
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  fetch('http://localhost:5000/api/reports/savings-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                  })
+                  .then(async res => {
+                    const text = await res.text();
+                    console.log('Response status:', res.status);
+                    console.log('Response text:', text);
+                    
+                    if (!text) {
+                      throw new Error(`Empty response from server (status: ${res.status})`);
+                    }
+                    try {
+                      return JSON.parse(text);
+                    } catch (e) {
+                      throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+                    }
+                  })
+                  .then(data => {
+                    console.log('Parsed data:', data);
+                    if (data.success) {
+                      alert('Email report sent successfully!\n' + data.message);
+                    } else {
+                      alert('Failed to send email report: ' + (data.error || 'Unknown error'));
+                    }
+                  })
+                  .catch(err => {
+                    console.error('Fetch error:', err);
+                    alert('Error sending email: ' + err.message);
+                  });
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+              >
+                📧 Email Report
+              </button>
+              <button
+                onClick={() => {
+                  fetch('http://localhost:5000/api/reports/savings-whatsapp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                  })
+                  .then(async res => {
+                    const text = await res.text();
+                    console.log('Response status:', res.status);
+                    console.log('Response text:', text);
+                    
+                    if (!text) {
+                      throw new Error(`Empty response from server (status: ${res.status})`);
+                    }
+                    try {
+                      return JSON.parse(text);
+                    } catch (e) {
+                      throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+                    }
+                  })
+                  .then(data => {
+                    console.log('Parsed data:', data);
+                    if (data.success) {
+                      alert('WhatsApp report sent successfully!\n' + data.message);
+                    } else {
+                      alert('Failed to send WhatsApp report: ' + (data.error || 'Unknown error'));
+                    }
+                  })
+                  .catch(err => {
+                    console.error('Fetch error:', err);
+                    alert('Error sending WhatsApp report: ' + err.message);
+                  });
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+              >
+                💬 WhatsApp Report
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
