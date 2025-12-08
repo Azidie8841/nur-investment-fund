@@ -345,6 +345,21 @@ const initializeDb = () => {
     )
   `);
 
+  // Fund Management table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS fund_management (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL DEFAULT 'Savings',
+      target_value REAL NOT NULL,
+      current_value REAL DEFAULT 0,
+      description TEXT,
+      status TEXT DEFAULT 'Active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Alternative Investments table (Crypto, Gold, etc.)
   db.exec(`
     CREATE TABLE IF NOT EXISTS alternative_investments (
@@ -574,6 +589,103 @@ const createStrategicPlansTableSafely = () => {
   }, 'Create strategic_plans table');
 };
 
+// ==================== FUND MANAGEMENT CRUD ====================
+
+/**
+ * Get all funds
+ */
+const getAllFunds = () => {
+  try {
+    return db.prepare('SELECT * FROM fund_management ORDER BY created_at DESC').all();
+  } catch (error) {
+    console.error('Error getting funds:', error.message);
+    return [];
+  }
+};
+
+/**
+ * Get fund by ID
+ */
+const getFundById = (id) => {
+  try {
+    return db.prepare('SELECT * FROM fund_management WHERE id = ?').get(id);
+  } catch (error) {
+    console.error('Error getting fund:', error.message);
+    return null;
+  }
+};
+
+/**
+ * Create new fund
+ */
+const createFund = (name, type, targetValue, currentValue = 0, description = '') => {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO fund_management (name, type, target_value, current_value, description, status)
+      VALUES (?, ?, ?, ?, ?, 'Active')
+    `);
+    const result = stmt.run(name, type, targetValue, currentValue, description);
+    console.log(`✓ Fund created: ${name}`);
+    return { id: result.lastInsertRowid, name, type, target_value: targetValue, current_value: currentValue, description, status: 'Active' };
+  } catch (error) {
+    console.error('Error creating fund:', error.message);
+    return null;
+  }
+};
+
+/**
+ * Update fund
+ */
+const updateFund = (id, name, type, targetValue, currentValue, description, status) => {
+  try {
+    const stmt = db.prepare(`
+      UPDATE fund_management 
+      SET name = ?, type = ?, target_value = ?, current_value = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(name, type, targetValue, currentValue, description, status, id);
+    console.log(`✓ Fund updated: ${name}`);
+    return getFundById(id);
+  } catch (error) {
+    console.error('Error updating fund:', error.message);
+    return null;
+  }
+};
+
+/**
+ * Delete fund
+ */
+const deleteFund = (id) => {
+  try {
+    const fund = getFundById(id);
+    const stmt = db.prepare('DELETE FROM fund_management WHERE id = ?');
+    stmt.run(id);
+    console.log(`✓ Fund deleted: ${fund?.name || id}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting fund:', error.message);
+    return false;
+  }
+};
+
+/**
+ * Update fund current value
+ */
+const updateFundCurrentValue = (id, currentValue) => {
+  try {
+    const stmt = db.prepare(`
+      UPDATE fund_management 
+      SET current_value = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(currentValue, id);
+    return getFundById(id);
+  } catch (error) {
+    console.error('Error updating fund value:', error.message);
+    return null;
+  }
+};
+
 // ==================== INITIALIZATION ====================
 
 module.exports = { 
@@ -587,5 +699,12 @@ module.exports = {
   executeTransaction,
   initializeSchemaVersion,
   migrateAlternativeInvestments,
-  createStrategicPlansTableSafely
+  createStrategicPlansTableSafely,
+  // Fund Management CRUD
+  getAllFunds,
+  getFundById,
+  createFund,
+  updateFund,
+  deleteFund,
+  updateFundCurrentValue
 };

@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const { db, initializeDb } = require('./db.cjs');
+const { db, initializeDb, getAllFunds, getFundById, createFund, updateFund, deleteFund, updateFundCurrentValue } = require('./db.cjs');
 const { createBackup, listBackups, restoreBackup, cleanOldBackups } = require('./backup.cjs');
 
 const app = express();
@@ -972,6 +972,121 @@ app.get('/api/reports/investments-email', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="investment-report.html"');
     res.send(htmlReport);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Fund Management Routes =====
+
+// GET all funds
+app.get('/api/funds', (req, res) => {
+  try {
+    const funds = getAllFunds();
+    res.json(funds);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET single fund by ID
+app.get('/api/funds/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const fund = getFundById(id);
+    if (!fund) {
+      return res.status(404).json({ error: 'Fund not found' });
+    }
+    res.json(fund);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// CREATE new fund
+app.post('/api/funds', (req, res) => {
+  try {
+    const { name, type, target_value, current_value = 0, description = '' } = req.body;
+    
+    if (!name || !type || target_value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: name, type, target_value' });
+    }
+    
+    const fund = createFund(name, type, target_value, current_value, description);
+    if (!fund) {
+      return res.status(400).json({ error: 'Fund name already exists or invalid data' });
+    }
+    
+    res.status(201).json(fund);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPDATE fund
+app.put('/api/funds/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, target_value, current_value, description, status } = req.body;
+    
+    const existing = getFundById(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Fund not found' });
+    }
+    
+    const fund = updateFund(
+      id, 
+      name || existing.name, 
+      type || existing.type, 
+      target_value !== undefined ? target_value : existing.target_value,
+      current_value !== undefined ? current_value : existing.current_value,
+      description !== undefined ? description : existing.description,
+      status || existing.status
+    );
+    
+    res.json(fund);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE fund
+app.delete('/api/funds/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const fund = getFundById(id);
+    
+    if (!fund) {
+      return res.status(404).json({ error: 'Fund not found' });
+    }
+    
+    const deleted = deleteFund(id);
+    if (deleted) {
+      res.json({ message: 'Fund deleted successfully', fund });
+    } else {
+      res.status(500).json({ error: 'Failed to delete fund' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPDATE fund current value
+app.patch('/api/funds/:id/value', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { current_value } = req.body;
+    
+    if (current_value === undefined) {
+      return res.status(400).json({ error: 'Missing current_value' });
+    }
+    
+    const fund = updateFundCurrentValue(id, current_value);
+    if (!fund) {
+      return res.status(404).json({ error: 'Fund not found' });
+    }
+    
+    res.json(fund);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
