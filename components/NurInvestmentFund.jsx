@@ -1213,7 +1213,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-blue-200">
                 <p className="text-3xl font-bold text-blue-600">70%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-blue-200 rounded-full h-2">
                     <div className="bg-blue-600 h-2 rounded-full" style={{width: '70%'}}></div>
@@ -1234,7 +1234,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-green-200">
                 <p className="text-3xl font-bold text-green-600">15%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-green-200 rounded-full h-2">
                     <div className="bg-green-600 h-2 rounded-full" style={{width: '15%'}}></div>
@@ -1247,7 +1247,7 @@ const NurInvestmentFund = () => {
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200 shadow-sm hover:shadow-md transition">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h4 className="font-semibold text-gray-800 text-sm">Magnificent 7</h4>
+                  <h4 className="font-semibold text-gray-800 text-sm">7 Value Magnificent</h4>
                   <p className="text-xs text-gray-600 mt-1">Large-cap tech leaders</p>
                 </div>
                 <span className="text-2xl">🚀</span>
@@ -1255,7 +1255,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-purple-200">
                 <p className="text-3xl font-bold text-purple-600">10%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-purple-200 rounded-full h-2">
                     <div className="bg-purple-600 h-2 rounded-full" style={{width: '10%'}}></div>
@@ -1276,7 +1276,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-orange-200">
                 <p className="text-3xl font-bold text-orange-600">5%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-orange-200 rounded-full h-2">
                     <div className="bg-orange-600 h-2 rounded-full" style={{width: '5%'}}></div>
