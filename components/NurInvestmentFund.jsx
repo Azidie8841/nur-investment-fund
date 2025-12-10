@@ -277,6 +277,7 @@ const NurInvestmentFund = () => {
         { id: 'reserve', name: 'Reserve', icon: Briefcase }
       ]
     },
+    { id: 'voting', name: 'Voting', icon: BookOpen },
     { id: 'plans', name: 'Strategic Plans', icon: Target },
     { id: 'admin', name: 'Admin', icon: Shield },
     { id: 'profiles', name: 'User Profiles', icon: Users, adminOnly: true },
@@ -1785,6 +1786,125 @@ const NurInvestmentFund = () => {
     </div>
   );
 
+  const VotingView = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold mb-6">Fund Voting & Governance</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">Active Votes</p>
+            <p className="text-3xl font-bold text-blue-600">2</p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">Completed Votes</p>
+            <p className="text-3xl font-bold text-green-600">12</p>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">Your Participation</p>
+            <p className="text-3xl font-bold text-purple-600">100%</p>
+          </div>
+        </div>
+
+        <h3 className="text-xl font-semibold mb-4">Active Voting Items</h3>
+        <div className="space-y-4">
+          {[
+            {
+              id: 1,
+              title: 'Approve 2025 Budget Allocation',
+              description: 'Vote on the proposed budget for 2025 fiscal year',
+              deadline: 'Dec 20, 2025',
+              votes: { yes: 7, no: 1, abstain: 2 },
+              status: 'Open'
+            },
+            {
+              id: 2,
+              title: 'Elect Board Member - Finance Committee',
+              description: 'Select new member for the Finance Committee',
+              deadline: 'Dec 25, 2025',
+              votes: { yes: 5, no: 2, abstain: 3 },
+              status: 'Open'
+            }
+          ].map((vote) => {
+            const totalVotes = vote.votes.yes + vote.votes.no + vote.votes.abstain;
+            return (
+              <div key={vote.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg">{vote.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1">{vote.description}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    vote.status === 'Open' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {vote.status}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-4 mb-3">
+                  <span className="text-sm text-gray-500">Deadline: {vote.deadline}</span>
+                  <span className="text-sm text-gray-500">{totalVotes} votes cast</span>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 text-sm font-medium">Yes ({vote.votes.yes})</div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div className="bg-green-500 h-full" style={{width: `${(vote.votes.yes / totalVotes) * 100}%`}}></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 text-sm font-medium">No ({vote.votes.no})</div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div className="bg-red-500 h-full" style={{width: `${(vote.votes.no / totalVotes) * 100}%`}}></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 text-sm font-medium">Abstain ({vote.votes.abstain})</div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div className="bg-gray-400 h-full" style={{width: `${(vote.votes.abstain / totalVotes) * 100}%`}}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium">
+                    Vote Yes
+                  </button>
+                  <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium">
+                    Vote No
+                  </button>
+                  <button className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium">
+                    Abstain
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">Past Voting Results</h3>
+        <div className="space-y-3">
+          {[
+            { title: 'Approve 2024 Annual Report', result: 'PASSED', yes: 9, no: 1 },
+            { title: 'Increase Fund Target for 2025', result: 'PASSED', yes: 7, no: 3 },
+            { title: 'Rebalance Portfolio Allocation', result: 'PASSED', yes: 8, no: 2 }
+          ].map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">{item.title}</p>
+                <p className="text-xs text-gray-600">Yes: {item.yes}, No: {item.no}</p>
+              </div>
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                {item.result}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   const SavingsView = () => {
     const totalSavings = savingsRecords.reduce((sum, record) => sum + (record.amount || 0), 0);
     const totalGoal = savingsGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
@@ -2755,6 +2875,17 @@ const NurInvestmentFund = () => {
         return <SavingsView />;
       case 'reserve':
         return <ReserveView />;
+      case 'voting':
+        if (!currentUser?.hasVotingAccess) {
+          return (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <p className="text-red-600 font-semibold mb-4">Access Denied</p>
+              <p className="text-gray-600">You need a valid seed phrase to access the Voting section.</p>
+              <p className="text-gray-500 text-sm mt-4">Please login again with the correct seed phrase.</p>
+            </div>
+          );
+        }
+        return <VotingView />;
       case 'plans':
         return renderPlans();
       default:
@@ -2978,6 +3109,11 @@ const NurInvestmentFund = () => {
               }
               
               // Regular items
+              // Hide voting tab if user doesn't have voting access
+              if (item.id === 'voting' && !currentUser?.hasVotingAccess) {
+                return null;
+              }
+              
               return (
                 <button
                   key={item.id}
@@ -2990,6 +3126,7 @@ const NurInvestmentFund = () => {
                       ? 'bg-blue-600 text-white font-medium'
                       : 'text-slate-300 hover:bg-slate-800'
                   }`}
+                  title={item.id === 'voting' && !currentUser?.hasVotingAccess ? 'Voting access required' : ''}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
