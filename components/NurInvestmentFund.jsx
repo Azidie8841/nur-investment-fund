@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -140,6 +140,19 @@ const NurInvestmentFund = () => {
       }
     };
     loadAllocationSettings();
+  }, []);
+
+  // Load funds from database
+  useEffect(() => {
+    const loadFunds = async () => {
+      try {
+        const fundsData = await fetchFunds();
+        setFunds(fundsData);
+      } catch (error) {
+        console.error('Failed to load funds:', error);
+      }
+    };
+    loadFunds();
   }, []);
 
   // Find current user object by id if logged in
@@ -1109,6 +1122,13 @@ const NurInvestmentFund = () => {
     }, 0);
   };
 
+  // Calculate total equities base value (without 3.7 conversion) for allocation cards
+  const calculateTotalEquitiesBaseValue = () => {
+    return equitiesCompanies.reduce((total, company) => {
+      return total + company.value;
+    }, 0);
+  };
+
   // Calculate equities segment data for cards
   const getEquitiesSegmentData = () => {
     const totalRm = calculateTotalEquitiesValue();
@@ -1225,7 +1245,10 @@ const NurInvestmentFund = () => {
         </div>
 
         <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-4">Fund Allocation Strategy</h3>
+          <h3 className="text-lg font-semibold mb-2">Fund Allocation Strategy</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Total Equities Allocation Value: <span className="font-bold text-blue-600">RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </p>
           <div className="grid grid-cols-4 gap-4">
             {/* Index Funds & ETF */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 shadow-sm hover:shadow-md transition">
@@ -1239,7 +1262,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-blue-200">
                 <p className="text-3xl font-bold text-blue-600">70%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-blue-200 rounded-full h-2">
                     <div className="bg-blue-600 h-2 rounded-full" style={{width: '70%'}}></div>
@@ -1260,7 +1283,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-green-200">
                 <p className="text-3xl font-bold text-green-600">15%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-green-200 rounded-full h-2">
                     <div className="bg-green-600 h-2 rounded-full" style={{width: '15%'}}></div>
@@ -1281,7 +1304,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-purple-200">
                 <p className="text-3xl font-bold text-purple-600">10%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-purple-200 rounded-full h-2">
                     <div className="bg-purple-600 h-2 rounded-full" style={{width: '10%'}}></div>
@@ -1302,7 +1325,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-orange-200">
                 <p className="text-3xl font-bold text-orange-600">5%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-orange-200 rounded-full h-2">
                     <div className="bg-orange-600 h-2 rounded-full" style={{width: '5%'}}></div>
@@ -1330,6 +1353,7 @@ const NurInvestmentFund = () => {
                   <th className="text-left py-3 px-4 font-semibold">Asset</th>
                   <th className="text-right py-3 px-4 font-semibold">Market Value (RM)</th>
                   <th className="text-left py-3 px-4 font-semibold">Sector</th>
+                  <th className="text-left py-3 px-4 font-semibold">Type</th>
                   <th className="text-left py-3 px-4 font-semibold">Country</th>
                 </tr>
               </thead>
@@ -1344,6 +1368,7 @@ const NurInvestmentFund = () => {
                       </td>
                       <td className="py-3 px-4 text-right">RM {displayValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4">{company.sector}</td>
+                      <td className="py-3 px-4"><span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{company.type || 'Index Funds & ETF'}</span></td>
                       <td className="py-3 px-4">{company.country}</td>
                     </tr>
                   );
