@@ -55,6 +55,7 @@ export default function AdminPanel({
     alternatives: 8,
     cash: 2
   });
+  const [hoveredSegment, setHoveredSegment] = useState(null);
 
   // company form
   const [cName, setCName] = useState('');
@@ -991,36 +992,117 @@ export default function AdminPanel({
                 </div>
               </div>
 
-              {/* Allocation Summary Chart */}
+              {/* Allocation Summary Chart - Donut */}
               <div className="border-t pt-4 mt-4">
-                <p className="text-xs font-semibold text-gray-600 mb-3">Allocation Overview:</p>
-                <div className="flex h-10 rounded-lg overflow-hidden gap-0.5 bg-gray-100 p-0.5">
-                  <div 
-                    style={{width: `${editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%`}}
-                    className="bg-blue-500 rounded flex items-center justify-center"
-                  >
-                    {(editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%</span>}
-                  </div>
-                  <div 
-                    style={{width: `${editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%`}}
-                    className="bg-green-500 rounded flex items-center justify-center"
-                  >
-                    {(editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%</span>}
-                  </div>
-                  <div 
-                    style={{width: `${editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%`}}
-                    className="bg-purple-500 rounded flex items-center justify-center"
-                  >
-                    {(editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%</span>}
-                  </div>
-                  <div 
-                    style={{width: `${editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%`}}
-                    className="bg-amber-500 rounded flex items-center justify-center"
-                  >
-                    {(editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%</span>}
+                <p className="text-xs font-semibold text-gray-600 mb-4">Allocation Overview:</p>
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <svg width="280" height="280" viewBox="0 0 280 280" className="drop-shadow-lg">
+                      {/* Equities (Blue) */}
+                      <circle
+                        cx="140"
+                        cy="140"
+                        r="90"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="35"
+                        strokeDasharray={`${(editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities) / 100 * 565.5} 565.5`}
+                        strokeDashoffset="0"
+                        transform="rotate(-90 140 140)"
+                        onMouseEnter={() => setHoveredSegment('equities')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        style={{ opacity: hoveredSegment === null || hoveredSegment === 'equities' ? 1 : 0.4 }}
+                      />
+                      {/* Fixed Income (Green) */}
+                      <circle
+                        cx="140"
+                        cy="140"
+                        r="90"
+                        fill="none"
+                        stroke="#22c55e"
+                        strokeWidth="35"
+                        strokeDasharray={`${(editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome) / 100 * 565.5} 565.5`}
+                        strokeDashoffset={-((editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities) / 100 * 565.5)}
+                        transform="rotate(-90 140 140)"
+                        onMouseEnter={() => setHoveredSegment('fixedIncome')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        style={{ opacity: hoveredSegment === null || hoveredSegment === 'fixedIncome' ? 1 : 0.4 }}
+                      />
+                      {/* Alternatives (Purple) */}
+                      <circle
+                        cx="140"
+                        cy="140"
+                        r="90"
+                        fill="none"
+                        stroke="#a855f7"
+                        strokeWidth="35"
+                        strokeDasharray={`${(editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) / 100 * 565.5} 565.5`}
+                        strokeDashoffset={-((editingAllocation ? tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome : allocationPercentages.equities + allocationPercentages.fixedIncome) / 100 * 565.5)}
+                        transform="rotate(-90 140 140)"
+                        onMouseEnter={() => setHoveredSegment('alternatives')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        style={{ opacity: hoveredSegment === null || hoveredSegment === 'alternatives' ? 1 : 0.4 }}
+                      />
+                      {/* Cash (Amber) */}
+                      <circle
+                        cx="140"
+                        cy="140"
+                        r="90"
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="35"
+                        strokeDasharray={`${(editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash) / 100 * 565.5} 565.5`}
+                        strokeDashoffset={-((editingAllocation ? tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome + tempAllocationPercentages.alternatives : allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives) / 100 * 565.5)}
+                        transform="rotate(-90 140 140)"
+                        onMouseEnter={() => setHoveredSegment('cash')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        style={{ opacity: hoveredSegment === null || hoveredSegment === 'cash' ? 1 : 0.4 }}
+                      />
+                      {/* Center circle */}
+                      <circle cx="140" cy="140" r="55" fill="white" />
+                      <text x="140" y="150" textAnchor="middle" className="text-2xl font-bold" fill="#374151" fontFamily="Arial, sans-serif">
+                        {editingAllocation ? tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome + tempAllocationPercentages.alternatives + tempAllocationPercentages.cash : allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives + allocationPercentages.cash}%
+                      </text>
+                    </svg>
+                    
+                    {/* Hover Tooltip */}
+                    {hoveredSegment && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-gray-900 text-white px-4 py-3 rounded-lg text-center shadow-lg">
+                          {hoveredSegment === 'equities' && (
+                            <div>
+                              <p className="font-semibold text-lg">Equities</p>
+                              <p className="text-xl font-bold text-blue-400">{editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%</p>
+                            </div>
+                          )}
+                          {hoveredSegment === 'fixedIncome' && (
+                            <div>
+                              <p className="font-semibold text-lg">Fixed Income</p>
+                              <p className="text-xl font-bold text-green-400">{editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%</p>
+                            </div>
+                          )}
+                          {hoveredSegment === 'alternatives' && (
+                            <div>
+                              <p className="font-semibold text-lg">Alternatives</p>
+                              <p className="text-xl font-bold text-purple-400">{editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%</p>
+                            </div>
+                          )}
+                          {hoveredSegment === 'cash' && (
+                            <div>
+                              <p className="font-semibold text-lg">Cash</p>
+                              <p className="text-xl font-bold text-amber-400">{editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-4 mt-3 text-xs flex-wrap">
+                <div className="flex gap-4 mt-4 text-xs flex-wrap justify-center">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded"></div>
                     <span>Equities ({editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%)</span>
