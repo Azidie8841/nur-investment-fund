@@ -1200,7 +1200,7 @@ const NurInvestmentFund = () => {
 
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4">Fund Allocation Strategy</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {/* Index Funds & ETF */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 shadow-sm hover:shadow-md transition">
               <div className="flex items-start justify-between mb-3">
