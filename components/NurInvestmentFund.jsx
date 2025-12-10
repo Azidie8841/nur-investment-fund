@@ -17,8 +17,12 @@ const NurInvestmentFund = () => {
   const [selectedBond, setSelectedBond] = useState(null);
   const [financialDropdownOpen, setFinancialDropdownOpen] = useState(false);
   const [investmentDropdownOpen, setInvestmentDropdownOpen] = useState(false);
-  // Simulated current user (for demo, can be switched to login later)
-  const [user, setUser] = useState({ id: 1, name: 'Family Member', email: 'family@example.com', role: 'admin' });
+  
+  // Session management - check localStorage for user session
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('userSession');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   // State for data from API
   const [equitiesCompanies, setEquitiesCompanies] = useState([]);
@@ -2967,8 +2971,11 @@ const NurInvestmentFund = () => {
                 </div>
               </div>
               <button
-                className="ml-4 px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                onClick={() => setUser(null)}
+                className="ml-4 px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-medium"
+                onClick={() => {
+                  localStorage.removeItem('userSession');
+                  setUser(null);
+                }}
               >
                 Logout
               </button>

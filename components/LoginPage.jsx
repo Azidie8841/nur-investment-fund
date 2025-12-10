@@ -44,6 +44,9 @@ export default function LoginPage({ profiles, onLogin }) {
       hasVotingAccess: validSeedPhrases.includes(seedPhrase.toLowerCase().trim())
     };
 
+    // Save session to localStorage
+    localStorage.setItem('userSession', JSON.stringify(userWithAuth));
+    
     onLogin(userWithAuth);
   };
 
