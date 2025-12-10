@@ -1268,10 +1268,26 @@ const NurInvestmentFund = () => {
                 <p className="text-3xl font-bold text-blue-600">70%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
                 <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-blue-700 mt-4">Market value: RM {equitiesCompanies.filter(c => c.type && c.type.trim() === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                {(() => {
+                  const shouldInvest = ((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.70);
+                  const marketValue = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0);
+                  const difference = shouldInvest - marketValue;
+                  const percentDiff = (difference / (shouldInvest || 1)) * 100;
+                  
+                  if (difference > 0) {
+                    return <p className="text-sm font-semibold text-blue-700 mt-3 bg-blue-50 p-2 rounded">🔵 BUY: RM {difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>;
+                  } else if (percentDiff < -10) {
+                    return <p className="text-sm font-semibold text-blue-700 mt-3 bg-blue-50 p-2 rounded">🔴 SELL: RM {Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to rebalance</p>;
+                  }
+                  return null;
+                })()}
                 <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Market progress</p>
                   <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{width: '70%'}}></div>
+                    <div className="bg-blue-600 h-2 rounded-full" style={{width: `${Math.min(100, (equitiesCompanies.filter(c => c.type === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.70) || 1)) * 100)}%`}}></div>
                   </div>
+                  <p className="text-xs text-blue-700 font-semibold mt-1">{Math.min(100, (equitiesCompanies.filter(c => c.type === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.70) || 1)) * 100).toFixed(1)}%</p>
                 </div>
               </div>
             </div>
@@ -1289,10 +1305,26 @@ const NurInvestmentFund = () => {
                 <p className="text-3xl font-bold text-green-600">15%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
                 <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-green-700 mt-4">Market value: RM {equitiesCompanies.filter(c => c.type && c.type.trim() === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                {(() => {
+                  const shouldInvest = ((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.15);
+                  const marketValue = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
+                  const difference = shouldInvest - marketValue;
+                  const percentDiff = (difference / (shouldInvest || 1)) * 100;
+                  
+                  if (difference > 0) {
+                    return <p className="text-sm font-semibold text-green-700 mt-3 bg-green-50 p-2 rounded">🟢 BUY: RM {difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>;
+                  } else if (percentDiff < -10) {
+                    return <p className="text-sm font-semibold text-green-700 mt-3 bg-green-50 p-2 rounded">🔴 SELL: RM {Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to rebalance</p>;
+                  }
+                  return null;
+                })()}
                 <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Market progress</p>
                   <div className="w-full bg-green-200 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full" style={{width: '15%'}}></div>
+                    <div className="bg-green-600 h-2 rounded-full" style={{width: `${Math.min(100, (equitiesCompanies.filter(c => c.type === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.15) || 1)) * 100)}%`}}></div>
                   </div>
+                  <p className="text-xs text-green-700 font-semibold mt-1">{Math.min(100, (equitiesCompanies.filter(c => c.type === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.15) || 1)) * 100).toFixed(1)}%</p>
                 </div>
               </div>
             </div>
@@ -1310,10 +1342,26 @@ const NurInvestmentFund = () => {
                 <p className="text-3xl font-bold text-purple-600">10%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
                 <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-purple-700 mt-4">Market value: RM {equitiesCompanies.filter(c => c.type && c.type.trim() === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                {(() => {
+                  const shouldInvest = ((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.10);
+                  const marketValue = equitiesCompanies.filter(c => c.type && c.type.trim() === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0);
+                  const difference = shouldInvest - marketValue;
+                  const percentDiff = (difference / (shouldInvest || 1)) * 100;
+                  
+                  if (difference > 0) {
+                    return <p className="text-sm font-semibold text-purple-700 mt-3 bg-purple-50 p-2 rounded">🟣 BUY: RM {difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>;
+                  } else if (percentDiff < -10) {
+                    return <p className="text-sm font-semibold text-purple-700 mt-3 bg-purple-50 p-2 rounded">🔴 SELL: RM {Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to rebalance</p>;
+                  }
+                  return null;
+                })()}
                 <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Market progress</p>
                   <div className="w-full bg-purple-200 rounded-full h-2">
-                    <div className="bg-purple-600 h-2 rounded-full" style={{width: '10%'}}></div>
+                    <div className="bg-purple-600 h-2 rounded-full" style={{width: `${Math.min(100, (equitiesCompanies.filter(c => c.type === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.10) || 1)) * 100)}%`}}></div>
                   </div>
+                  <p className="text-xs text-purple-700 font-semibold mt-1">{Math.min(100, (equitiesCompanies.filter(c => c.type === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.10) || 1)) * 100).toFixed(1)}%</p>
                 </div>
               </div>
             </div>
@@ -1331,10 +1379,26 @@ const NurInvestmentFund = () => {
                 <p className="text-3xl font-bold text-orange-600">5%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
                 <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-orange-700 mt-4">Market value: RM {equitiesCompanies.filter(c => c.type && c.type.trim() === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                {(() => {
+                  const shouldInvest = ((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.05);
+                  const marketValue = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
+                  const difference = shouldInvest - marketValue;
+                  const percentDiff = (difference / (shouldInvest || 1)) * 100;
+                  
+                  if (difference > 0) {
+                    return <p className="text-sm font-semibold text-orange-700 mt-3 bg-orange-50 p-2 rounded">🟠 BUY: RM {difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>;
+                  } else if (percentDiff < -10) {
+                    return <p className="text-sm font-semibold text-orange-700 mt-3 bg-orange-50 p-2 rounded">🔴 SELL: RM {Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to rebalance</p>;
+                  }
+                  return null;
+                })()}
                 <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Market progress</p>
                   <div className="w-full bg-orange-200 rounded-full h-2">
-                    <div className="bg-orange-600 h-2 rounded-full" style={{width: '5%'}}></div>
+                    <div className="bg-orange-600 h-2 rounded-full" style={{width: `${Math.min(100, (equitiesCompanies.filter(c => c.type === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.05) || 1)) * 100)}%`}}></div>
                   </div>
+                  <p className="text-xs text-orange-700 font-semibold mt-1">{Math.min(100, (equitiesCompanies.filter(c => c.type === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0) / (((funds[0]?.target_value || 0) * (allocationPercentages.equities / 100) * 0.05) || 1)) * 100).toFixed(1)}%</p>
                 </div>
               </div>
             </div>
@@ -1642,11 +1706,11 @@ const NurInvestmentFund = () => {
         </div>
       </div>
 
-      {/* Investment Cards - Single Horizontal Line */}
-      <div className="flex gap-4 overflow-x-auto pb-4" style={{width: 'calc(4 * 288px + 3 * 16px)', maxWidth: '100%', marginX: 'auto'}}>
+      {/* Investment Cards - Side by Side */}
+      <div className="grid grid-cols-4 gap-4 w-full">
         {/* Equities Card */}
         <div 
-          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative"
           onClick={() => setSelectedInvestmentType('equities')}
         >
           <div className="flex justify-center mb-3">
@@ -1671,7 +1735,7 @@ const NurInvestmentFund = () => {
 
         {/* Alternative Investments Card */}
         <div 
-          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative"
           onClick={() => setSelectedInvestmentType('alternative')}
         >
           <div className="flex justify-center mb-3">
@@ -1694,7 +1758,7 @@ const NurInvestmentFund = () => {
         </div>
         {/* Fixed Income Card */}
         <div 
-          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative"
           onClick={() => setSelectedInvestmentType('fixed-income')}
         >
           <div className="flex justify-center mb-3">
@@ -1719,7 +1783,7 @@ const NurInvestmentFund = () => {
 
         {/* Cash & Cash Equivalents Card */}
         <div 
-          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative flex-shrink-0 w-72"
+          className="border border-slate-700 rounded-lg p-6 hover:shadow-xl transition-all cursor-pointer bg-slate-900 bg-opacity-50 flex flex-col relative"
           onClick={() => setSelectedInvestmentType('cash')}
         >
           <div className="flex justify-center mb-3">
@@ -1743,7 +1807,7 @@ const NurInvestmentFund = () => {
       </div>
 
       {/* Historical Investments Chart */}
-      <div className="bg-slate-900 rounded-lg border border-slate-700" style={{maxWidth: '100%', margin: '0 auto', padding: '1.5rem'}}>
+      <div className="bg-slate-900 rounded-lg border border-slate-700 mt-12" style={{maxWidth: '100%', margin: '3rem auto 0', padding: '1.5rem'}}>
         <h3 className="text-sm font-semibold mb-1 text-slate-300">Historical Investments</h3>
         <p className="text-xs text-slate-500 mb-4">Values are in billion RM as of Dec 5, 2025. The left y-axis shows the fund's total value. The right y-axis shows the value of the asset classes.</p>
         <ResponsiveContainer width="100%" height={300}>
@@ -2796,12 +2860,13 @@ const NurInvestmentFund = () => {
   };
 
   const renderContent = () => {
-    if (!user) {
-      return <LoginPage profiles={profiles} onLogin={(userData) => {
-        localStorage.setItem('userSession', JSON.stringify(userData));
-        setUser(userData);
-      }} />;
-    }
+    // Temporarily hidden for development - comment out to show login
+    // if (!user) {
+    //   return <LoginPage profiles={profiles} onLogin={(userData) => {
+    //     localStorage.setItem('userSession', JSON.stringify(userData));
+    //     setUser(userData);
+    //   }} />;
+    // }
     if (selectedSavingsRecord) {
       return <SavingsRecordDetailView recordId={selectedSavingsRecord} />;
     }

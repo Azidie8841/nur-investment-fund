@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund, fetchAllocationSettings, updateAllocationSettings } from '../utils/api';
 
 export default function AdminPanel({
@@ -185,7 +185,22 @@ export default function AdminPanel({
   const startEdit = (company) => {
     setEditingCompany(company);
     setEditName(company.name);
-    setEditValue(company.value);
+    
+    // Get latest month value from monthly data
+    const monthlyData = assetMonthlyData[company.name];
+    let latestValue = company.value;
+    
+    if (monthlyData) {
+      const months = ['dec', 'nov', 'oct', 'sep', 'aug', 'jul', 'jun', 'may', 'apr', 'mar', 'feb', 'jan'];
+      for (let month of months) {
+        if (monthlyData[month] !== undefined && monthlyData[month] !== null) {
+          latestValue = monthlyData[month] * 3.7; // Convert back to RM
+          break;
+        }
+      }
+    }
+    
+    setEditValue(latestValue);
     setEditSector(company.sector);
     setEditOwnership(company.ownership);
     setEditCountry(company.country);
@@ -238,16 +253,81 @@ export default function AdminPanel({
 
   const saveMonthlyValues = async () => {
     try {
+      // Save monthly values to database
       await updateAssetMonthlyData(selectedAssetForEdit, monthlyValues);
       setAssetMonthlyData((prev) => ({
         ...prev,
         [selectedAssetForEdit]: monthlyValues
       }));
+      
+      // Find the company and auto-update its market value from latest month
+      const company = equitiesCompanies.find(c => c.name === selectedAssetForEdit);
+      if (company) {
+        const months = ['dec', 'nov', 'oct', 'sep', 'aug', 'jul', 'jun', 'may', 'apr', 'mar', 'feb', 'jan'];
+        for (let month of months) {
+          if (monthlyValues[month] !== undefined && monthlyValues[month] !== null) {
+            const newMarketValue = Math.round(monthlyValues[month] * 3.7 * 100) / 100; // Convert to RM and round to 2 decimals
+            // Auto-save updated market value to database
+            await updateEquitiesCompany(company.id, {
+              name: company.name,
+              value: newMarketValue,
+              sector: company.sector,
+              ownership: company.ownership,
+              country: company.country,
+              type: company.type
+            });
+            // Update state
+            setEquitiesCompanies((prev) =>
+              prev.map((c) =>
+                c.id === company.id ? { ...c, value: newMarketValue } : c
+              )
+            );
+            break;
+          }
+        }
+      }
+      
       setSelectedAssetForEdit(null);
+      alert('Monthly values saved and market value updated!');
     } catch (error) {
       alert('Failed to save monthly values: ' + error.message);
     }
   };
+
+  // Auto-save monthly values with debounce
+  const autoSaveTimeoutRef = useRef(null);
+  const autoSaveMonthlyValues = async () => {
+    try {
+      if (selectedAssetForEdit) {
+        await updateAssetMonthlyData(selectedAssetForEdit, monthlyValues);
+        setAssetMonthlyData((prev) => ({
+          ...prev,
+          [selectedAssetForEdit]: monthlyValues
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to auto-save monthly values:', error.message);
+    }
+  };
+
+  // Debounced auto-save for monthly values
+  useEffect(() => {
+    if (selectedAssetForEdit && Object.keys(monthlyValues).length > 0) {
+      // Clear previous timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      // Set new timeout for auto-save after 1.5 seconds of no changes
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        autoSaveMonthlyValues();
+      }, 1500);
+    }
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [monthlyValues, selectedAssetForEdit]);
 
   const startEditBondDividends = (bondName, currentDividends = {}) => {
     setSelectedBondForDividendEdit(bondName);
@@ -1204,22 +1284,54 @@ export default function AdminPanel({
       <div className="bg-white rounded-lg shadow p-6">
         <h4 className="font-semibold mb-4">Recent Companies</h4>
         {editingCompany ? (
-          <div className="border p-4 rounded space-y-2">
-            <h5 className="font-medium">Edit Company</h5>
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Name" value={editName} onChange={(e)=>setEditName(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editValue} onChange={(e)=>setEditValue(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Sector" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Ownership" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
-            <select className="w-full px-3 py-2 border rounded text-sm" value={editType} onChange={(e)=>setEditType(e.target.value)}>
-              <option value="Index Funds & ETF">Index Funds & ETF</option>
-              <option value="Dividend Stocks">Dividend Stocks</option>
-              <option value="7 Value Magnificent">7 Value Magnificent</option>
-              <option value="Growth Stocks">Growth Stocks</option>
-            </select>
-            <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
-            <div className="flex gap-2">
-              <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveEdit}>Save</button>
-              <button className="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-sm" onClick={cancelEdit}>Cancel</button>
+          <div className="border p-4 rounded space-y-3">
+            <h5 className="font-medium text-lg mb-4">Edit Company</h5>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Company Name</label>
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="e.g., Apple Inc." value={editName} onChange={(e)=>setEditName(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Market Value (RM) - Latest Month</label>
+              <input 
+                className="w-full px-3 py-2 border rounded text-sm bg-gray-100 cursor-not-allowed" 
+                type="number" 
+                value={editValue} 
+                readOnly 
+                disabled
+              />
+              <p className="text-xs text-gray-500 mt-1">This value is automatically updated from the latest monthly value. Edit it in "Edit Monthly Values" section.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Sector</label>
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="e.g., Technology, Finance" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Ownership %</label>
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="e.g., 5.2" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Investment Type</label>
+              <select className="w-full px-3 py-2 border rounded text-sm" value={editType} onChange={(e)=>setEditType(e.target.value)}>
+                <option value="Index Funds & ETF">Index Funds & ETF</option>
+                <option value="Dividend Stocks">Dividend Stocks</option>
+                <option value="7 Value Magnificent">7 Value Magnificent</option>
+                <option value="Growth Stocks">Growth Stocks</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Country</label>
+              <input className="w-full px-3 py-2 border rounded text-sm" placeholder="e.g., United States" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm font-semibold hover:bg-green-700" onClick={saveEdit}>Save</button>
+              <button className="flex-1 px-3 py-2 bg-gray-400 text-white rounded text-sm font-semibold hover:bg-gray-500" onClick={cancelEdit}>Cancel</button>
             </div>
           </div>
         ) : (
@@ -1401,29 +1513,15 @@ export default function AdminPanel({
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <button
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded"
-                onClick={() => {
-                  updateFixedIncomeMonthlyData(selectedAssetForEdit, monthlyValues).then(() => {
-                    // Call the prop function to update parent state
-                    setFixedIncomeMonthlyData((prev) => ({
-                      ...prev,
-                      [selectedAssetForEdit]: monthlyValues
-                    }));
-                    setSelectedAssetForEdit(null);
-                    setMonthlyValues({});
-                    alert('Fixed income monthly values saved');
-                  }).catch(error => alert('Failed to save: ' + error.message));
-                }}
-              >
-                Save
-              </button>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 px-4 py-2 bg-green-100 text-green-700 rounded text-sm text-center">
+                ✓ Auto-saving...
+              </div>
               <button
                 className="flex-1 px-4 py-2 bg-gray-400 text-white rounded"
                 onClick={() => setSelectedAssetForEdit(null)}
               >
-                Cancel
+                Done
               </button>
             </div>
           </div>
