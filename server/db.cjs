@@ -153,10 +153,14 @@ const initializeDb = () => {
       sector TEXT,
       ownership TEXT,
       country TEXT,
+      type TEXT DEFAULT 'Index Funds & ETF',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  
+  // Add type column if it doesn't exist
+  addColumnIfNotExists('equities_companies', 'type', "TEXT DEFAULT 'Index Funds & ETF'");
 
   // Fixed Income Bonds table
   db.exec(`

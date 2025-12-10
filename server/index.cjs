@@ -33,13 +33,13 @@ app.get('/api/equities-companies', (req, res) => {
 
 app.post('/api/equities-companies', (req, res) => {
   try {
-    const { name, value, sector, ownership, country } = req.body;
+    const { name, value, sector, ownership, country, type } = req.body;
     const stmt = db.prepare(`
-      INSERT INTO equities_companies (name, value, sector, ownership, country)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO equities_companies (name, value, sector, ownership, country, type)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(name, value, sector, ownership, country);
-    res.json({ id: result.lastInsertRowid, name, value, sector, ownership, country });
+    const result = stmt.run(name, value, sector, ownership, country, type || 'Index Funds & ETF');
+    res.json({ id: result.lastInsertRowid, name, value, sector, ownership, country, type: type || 'Index Funds & ETF' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -48,13 +48,13 @@ app.post('/api/equities-companies', (req, res) => {
 app.put('/api/equities-companies/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { name, value, sector, ownership, country } = req.body;
+    const { name, value, sector, ownership, country, type } = req.body;
     db.prepare(`
       UPDATE equities_companies
-      SET name = ?, value = ?, sector = ?, ownership = ?, country = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, value = ?, sector = ?, ownership = ?, country = ?, type = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name, value, sector, ownership, country, id);
-    res.json({ id, name, value, sector, ownership, country });
+    `).run(name, value, sector, ownership, country, type || 'Index Funds & ETF', id);
+    res.json({ id, name, value, sector, ownership, country, type: type || 'Index Funds & ETF' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

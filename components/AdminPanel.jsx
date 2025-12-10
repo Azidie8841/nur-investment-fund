@@ -63,6 +63,7 @@ export default function AdminPanel({
   const [cSector, setCSector] = useState('');
   const [cOwnership, setCOwnership] = useState('');
   const [cCountry, setCCountry] = useState('');
+  const [cType, setCType] = useState('Index Funds & ETF');
 
   // edit mode state
   const [editingCompany, setEditingCompany] = useState(null);
@@ -71,6 +72,7 @@ export default function AdminPanel({
   const [editSector, setEditSector] = useState('');
   const [editOwnership, setEditOwnership] = useState('');
   const [editCountry, setEditCountry] = useState('');
+  const [editType, setEditType] = useState('Index Funds & ETF');
 
   // Fixed Income Bond form state
   const [bName, setBName] = useState('');
@@ -160,10 +162,11 @@ export default function AdminPanel({
         value: Number(cValue), 
         sector: cSector, 
         ownership: cOwnership, 
-        country: cCountry 
+        country: cCountry,
+        type: cType
       });
       setEquitiesCompanies((prev) => [newCompany, ...prev]);
-      setCName(''); setCValue(''); setCSector(''); setCOwnership(''); setCCountry('');
+      setCName(''); setCValue(''); setCSector(''); setCOwnership(''); setCCountry(''); setCType('Index Funds & ETF');
     } catch (error) {
       alert('Failed to add company: ' + error.message);
     }
@@ -186,6 +189,7 @@ export default function AdminPanel({
     setEditSector(company.sector);
     setEditOwnership(company.ownership);
     setEditCountry(company.country);
+    setEditType(company.type || 'Index Funds & ETF');
   };
 
   const saveEdit = async () => {
@@ -199,7 +203,8 @@ export default function AdminPanel({
         value: Number(editValue),
         sector: editSector,
         ownership: editOwnership,
-        country: editCountry
+        country: editCountry,
+        type: editType
       });
       setEquitiesCompanies((prev) =>
         prev.map((c) =>
@@ -1182,7 +1187,13 @@ export default function AdminPanel({
           <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Value" type="number" value={cValue} onChange={(e)=>setCValue(e.target.value)} />
           <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Sector" value={cSector} onChange={(e)=>setCSector(e.target.value)} />
           <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Ownership" value={cOwnership} onChange={(e)=>setCOwnership(e.target.value)} />
-          <input className="w-full px-3 py-2 border rounded col-span-2" placeholder="Country" value={cCountry} onChange={(e)=>setCCountry(e.target.value)} />
+          <select className="w-full px-3 py-2 border rounded col-span-1" value={cType} onChange={(e)=>setCType(e.target.value)}>
+            <option value="Index Funds & ETF">Index Funds & ETF</option>
+            <option value="Dividend Stocks">Dividend Stocks</option>
+            <option value="7 Value Magnificent">7 Value Magnificent</option>
+            <option value="Growth Stocks">Growth Stocks</option>
+          </select>
+          <input className="w-full px-3 py-2 border rounded col-span-1" placeholder="Country" value={cCountry} onChange={(e)=>setCCountry(e.target.value)} />
           <button className="px-4 py-2 bg-purple-600 text-white rounded col-span-2">Add Company</button>
         </form>
       </div>
@@ -1196,6 +1207,12 @@ export default function AdminPanel({
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Value" type="number" value={editValue} onChange={(e)=>setEditValue(e.target.value)} />
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Sector" value={editSector} onChange={(e)=>setEditSector(e.target.value)} />
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Ownership" value={editOwnership} onChange={(e)=>setEditOwnership(e.target.value)} />
+            <select className="w-full px-3 py-2 border rounded text-sm" value={editType} onChange={(e)=>setEditType(e.target.value)}>
+              <option value="Index Funds & ETF">Index Funds & ETF</option>
+              <option value="Dividend Stocks">Dividend Stocks</option>
+              <option value="7 Value Magnificent">7 Value Magnificent</option>
+              <option value="Growth Stocks">Growth Stocks</option>
+            </select>
             <input className="w-full px-3 py-2 border rounded text-sm" placeholder="Country" value={editCountry} onChange={(e)=>setEditCountry(e.target.value)} />
             <div className="flex gap-2">
               <button className="flex-1 px-3 py-1 bg-green-600 text-white rounded text-sm" onClick={saveEdit}>Save</button>
@@ -1206,7 +1223,10 @@ export default function AdminPanel({
           <ul className="space-y-2 text-sm">
             {equitiesCompanies.map((c, i) => (
               <li key={i} className="border p-2 rounded flex items-center justify-between">
-                <span>{c.name} — {c.sector} — {c.country}</span>
+                <div>
+                  <span>{c.name} — {c.sector} — {c.country}</span>
+                  <p className="text-xs text-gray-500 mt-1">{c.type || 'Index Funds & ETF'}</p>
+                </div>
                 <div className="flex gap-1">
                   <button
                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs"

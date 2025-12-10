@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -45,6 +45,14 @@ const NurInvestmentFund = () => {
   const [editingTheme, setEditingTheme] = useState(null);
   const [themeDetails, setThemeDetails] = useState({});
   const [expandedTarget, setExpandedTarget] = useState(null);
+
+  // Allocation percentages state
+  const [allocationPercentages, setAllocationPercentages] = useState({
+    equities: 60,
+    fixedIncome: 30,
+    alternatives: 8,
+    cash: 2
+  });
 
   // Load data from API on component mount
   useEffect(() => {
@@ -114,6 +122,24 @@ const NurInvestmentFund = () => {
     };
 
     loadData();
+  }, []);
+
+  // Load allocation settings from database
+  useEffect(() => {
+    const loadAllocationSettings = async () => {
+      try {
+        const settings = await fetchAllocationSettings();
+        setAllocationPercentages({
+          equities: settings.equities,
+          fixedIncome: settings.fixed_income,
+          alternatives: settings.alternatives,
+          cash: settings.cash
+        });
+      } catch (error) {
+        console.error('Failed to load allocation settings:', error);
+      }
+    };
+    loadAllocationSettings();
   }, []);
 
   // Find current user object by id if logged in
@@ -1213,7 +1239,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-blue-200">
                 <p className="text-3xl font-bold text-blue-600">70%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-blue-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.70).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-blue-200 rounded-full h-2">
                     <div className="bg-blue-600 h-2 rounded-full" style={{width: '70%'}}></div>
@@ -1234,7 +1260,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-green-200">
                 <p className="text-3xl font-bold text-green-600">15%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-green-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.15).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-green-200 rounded-full h-2">
                     <div className="bg-green-600 h-2 rounded-full" style={{width: '15%'}}></div>
@@ -1255,7 +1281,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-purple-200">
                 <p className="text-3xl font-bold text-purple-600">10%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-purple-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.10).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-purple-200 rounded-full h-2">
                     <div className="bg-purple-600 h-2 rounded-full" style={{width: '10%'}}></div>
@@ -1276,7 +1302,7 @@ const NurInvestmentFund = () => {
               <div className="mt-4 pt-4 border-t border-orange-200">
                 <p className="text-3xl font-bold text-orange-600">5%</p>
                 <p className="text-xs text-gray-600 mt-2">Target allocation</p>
-                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {((funds.find(f => f.type === 'Investment')?.target_value || calculateTotalEquitiesValue()) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {(calculateTotalEquitiesValue() * (allocationPercentages.equities / 100) * 0.05).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <div className="mt-3">
                   <div className="w-full bg-orange-200 rounded-full h-2">
                     <div className="bg-orange-600 h-2 rounded-full" style={{width: '5%'}}></div>
