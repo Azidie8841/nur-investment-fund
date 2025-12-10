@@ -2796,9 +2796,12 @@ const NurInvestmentFund = () => {
   };
 
   const renderContent = () => {
-    // if (!user) {
-    //   return <LoginPage profiles={profiles} onLogin={setUser} />;
-    // }
+    if (!user) {
+      return <LoginPage profiles={profiles} onLogin={(userData) => {
+        localStorage.setItem('userSession', JSON.stringify(userData));
+        setUser(userData);
+      }} />;
+    }
     if (selectedSavingsRecord) {
       return <SavingsRecordDetailView recordId={selectedSavingsRecord} />;
     }

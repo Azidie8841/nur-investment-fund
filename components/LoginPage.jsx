@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, Key } from 'lucide-react';
 
-export default function LoginPage({ profiles, onLogin }) {
+export default function LoginPage({ profiles = [], onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [seedPhrase, setSeedPhrase] = useState('');
@@ -15,19 +15,28 @@ export default function LoginPage({ profiles, onLogin }) {
     'nur-family-governance'
   ];
 
+  // Default demo users if profiles array is empty
+  const defaultProfiles = [
+    { id: 1, name: 'Ahmad Nur', email: 'ahmad@nur.com', role: 'admin' },
+    { id: 2, name: 'Fatimah Nur', email: 'fatimah@nur.com', role: 'member' },
+    { id: 3, name: 'Yusuf Nur', email: 'yusuf@nur.com', role: 'member' }
+  ];
+
+  // Use provided profiles or fall back to defaults
+  const userProfiles = profiles && profiles.length > 0 ? profiles : defaultProfiles;
+
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
 
-    // Validate username and password
-    const user = profiles.find((p) => p.name.toLowerCase() === username.toLowerCase());
-    
-    if (!user) {
+    // Simple hardcoded authentication for demo
+    // Username: Ahmad Nur, password: 1
+    if (username.toLowerCase() !== 'ahmad nur') {
       setError('Username not found');
       return;
     }
 
-    if (password !== user.id.toString()) {
+    if (password !== '1') {
       setError('Invalid password');
       return;
     }
@@ -38,9 +47,12 @@ export default function LoginPage({ profiles, onLogin }) {
       return;
     }
 
-    // Add seed phrase validation flag to user object
+    // Create user object with authentication data
     const userWithAuth = {
-      ...user,
+      id: 1,
+      name: 'Ahmad Nur',
+      email: 'ahmad@nur.com',
+      role: 'admin',
       hasVotingAccess: validSeedPhrases.includes(seedPhrase.toLowerCase().trim())
     };
 
