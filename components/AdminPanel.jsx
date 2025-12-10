@@ -612,7 +612,10 @@ export default function AdminPanel({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Admin Panel</h2>
+      <div className="flex items-center gap-4">
+        <h2 className="text-2xl font-bold">Admin Panel</h2>
+        <span className="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-semibold animate-pulse">ADMIN MODE</span>
+      </div>
 
       {/* Fund Management Section */}
       <div className="bg-white rounded-lg shadow p-6">
