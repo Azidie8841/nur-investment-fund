@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const { db, initializeDb, getAllFunds, getFundById, createFund, updateFund, deleteFund, updateFundCurrentValue } = require('./db.cjs');
+const { db, initializeDb, getAllFunds, getFundById, createFund, updateFund, deleteFund, updateFundCurrentValue, getAllocationSettings, updateAllocationSettings } = require('./db.cjs');
 const { createBackup, listBackups, restoreBackup, cleanOldBackups } = require('./backup.cjs');
 
 const app = express();
@@ -1087,6 +1087,32 @@ app.patch('/api/funds/:id/value', (req, res) => {
     }
     
     res.json(fund);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET allocation settings
+app.get('/api/allocation-settings', (req, res) => {
+  try {
+    const settings = getAllocationSettings();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPDATE allocation settings
+app.put('/api/allocation-settings', (req, res) => {
+  try {
+    const { equities, fixed_income, alternatives, cash } = req.body;
+    
+    if (equities === undefined || fixed_income === undefined || alternatives === undefined || cash === undefined) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const settings = updateAllocationSettings(equities, fixed_income, alternatives, cash);
+    res.json(settings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

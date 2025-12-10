@@ -740,3 +740,40 @@ export const updateFundValue = async (id, current_value) => {
     throw error;
   }
 };
+
+// Allocation Settings API
+export const fetchAllocationSettings = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/allocation-settings`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Fetched allocation settings:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching allocation settings:', error);
+    throw error;
+  }
+};
+
+export const updateAllocationSettings = async (equities, fixedIncome, alternatives, cash) => {
+  try {
+    const res = await fetch(`${API_BASE}/allocation-settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        equities, 
+        fixed_income: fixedIncome, 
+        alternatives, 
+        cash 
+      })
+    });
+    const data = await handleResponse(res);
+    console.log('Updated allocation settings:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating allocation settings:', error);
+    throw error;
+  }
+};

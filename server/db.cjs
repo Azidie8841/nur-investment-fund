@@ -360,6 +360,18 @@ const initializeDb = () => {
     )
   `);
 
+  // Allocation Settings table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS allocation_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      equities REAL DEFAULT 60,
+      fixed_income REAL DEFAULT 30,
+      alternatives REAL DEFAULT 8,
+      cash REAL DEFAULT 2,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Alternative Investments table (Crypto, Gold, etc.)
   db.exec(`
     CREATE TABLE IF NOT EXISTS alternative_investments (
@@ -686,6 +698,50 @@ const updateFundCurrentValue = (id, currentValue) => {
   }
 };
 
+/**
+ * Get current allocation settings
+ */
+const getAllocationSettings = () => {
+  try {
+    const stmt = db.prepare('SELECT * FROM allocation_settings LIMIT 1');
+    let settings = stmt.get();
+    
+    // If no settings exist, create default ones
+    if (!settings) {
+      const insertStmt = db.prepare(`
+        INSERT INTO allocation_settings (equities, fixed_income, alternatives, cash)
+        VALUES (60, 30, 8, 2)
+      `);
+      insertStmt.run();
+      settings = stmt.get();
+    }
+    
+    return settings;
+  } catch (error) {
+    console.error('Error getting allocation settings:', error.message);
+    return { equities: 60, fixed_income: 30, alternatives: 8, cash: 2 };
+  }
+};
+
+/**
+ * Update allocation settings
+ */
+const updateAllocationSettings = (equities, fixedIncome, alternatives, cash) => {
+  try {
+    const stmt = db.prepare(`
+      UPDATE allocation_settings 
+      SET equities = ?, fixed_income = ?, alternatives = ?, cash = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = (SELECT id FROM allocation_settings LIMIT 1)
+    `);
+    stmt.run(equities, fixedIncome, alternatives, cash);
+    console.log(`✓ Allocation settings updated: ${equities}% / ${fixedIncome}% / ${alternatives}% / ${cash}%`);
+    return getAllocationSettings();
+  } catch (error) {
+    console.error('Error updating allocation settings:', error.message);
+    return null;
+  }
+};
+
 // ==================== INITIALIZATION ====================
 
 module.exports = { 
@@ -706,5 +762,8 @@ module.exports = {
   createFund,
   updateFund,
   deleteFund,
-  updateFundCurrentValue
+  updateFundCurrentValue,
+  // Allocation Settings
+  getAllocationSettings,
+  updateAllocationSettings
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund } from '../utils/api';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund, fetchAllocationSettings, updateAllocationSettings } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
@@ -43,7 +43,17 @@ export default function AdminPanel({
   const [allocationPercentages, setAllocationPercentages] = useState({
     equities: 60,
     fixedIncome: 30,
-    alternatives: 10
+    alternatives: 8,
+    cash: 2
+  });
+
+  // allocation editing state
+  const [editingAllocation, setEditingAllocation] = useState(false);
+  const [tempAllocationPercentages, setTempAllocationPercentages] = useState({
+    equities: 60,
+    fixedIncome: 30,
+    alternatives: 8,
+    cash: 2
   });
 
   // company form
@@ -119,6 +129,24 @@ export default function AdminPanel({
       }
     };
     loadFunds();
+  }, []);
+
+  // Load allocation settings from database on component mount
+  useEffect(() => {
+    const loadAllocationSettings = async () => {
+      try {
+        const settings = await fetchAllocationSettings();
+        setAllocationPercentages({
+          equities: settings.equities,
+          fixedIncome: settings.fixed_income,
+          alternatives: settings.alternatives,
+          cash: settings.cash
+        });
+      } catch (error) {
+        console.error('Failed to load allocation settings:', error);
+      }
+    };
+    loadAllocationSettings();
   }, []);
 
   // simple helpers
@@ -638,11 +666,14 @@ export default function AdminPanel({
                     setNewFundTarget('');
                     alert('Fund created successfully!');
                   } else {
-                    alert('Failed to create fund');
+                    const errorData = await response.json();
+                    alert('Failed to create fund: ' + (errorData.error || 'Unknown error'));
                   }
                 } catch (error) {
                   alert('Error creating fund: ' + error.message);
                 }
+              } else {
+                alert('Please fill in all required fields: Fund Name and Target Value');
               }
             }}
           >
@@ -784,200 +815,282 @@ export default function AdminPanel({
         )}
       </div>
 
-      {/* Asset Allocation Percentage Section */}
+      {/* Asset Allocation Strategy Card */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="font-semibold mb-4">🎯 Asset Allocation Strategy</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold">🎯 Asset Allocation Strategy</h3>
+          {funds.length > 0 && (
+            <button
+              onClick={() => {
+                if (!editingAllocation) {
+                  setTempAllocationPercentages(allocationPercentages);
+                  setEditingAllocation(true);
+                } else {
+                  setEditingAllocation(false);
+                }
+              }}
+              className={`px-3 py-1 rounded text-sm font-medium transition ${
+                editingAllocation
+                  ? 'bg-gray-400 text-white hover:bg-gray-500'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {editingAllocation ? 'Cancel' : 'Edit'}
+            </button>
+          )}
+        </div>
         
-        <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
-          <p className="text-sm text-blue-900 mb-2 font-medium">Set your target allocation percentages for all investment types:</p>
-          
-          <div className="space-y-4">
-            {/* Equities Allocation */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-gray-700">📈 Equities (Stocks & Companies)</label>
-                <span className="text-lg font-bold text-blue-600">{allocationPercentages.equities}%</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.equities}
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
-                    const remaining = 100 - newValue;
-                    if (remaining >= 0) {
-                      setAllocationPercentages({
-                        ...allocationPercentages,
-                        equities: newValue
-                      });
-                    }
-                  }}
-                  className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.equities}
-                  onChange={(e) => {
-                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
-                    setAllocationPercentages({
-                      ...allocationPercentages,
-                      equities: newValue
-                    });
-                  }}
-                  className="w-16 px-2 py-1 border rounded text-sm"
-                />
-              </div>
-            </div>
+        {funds.length > 0 ? (
+          <div>
+            <p className="text-sm text-gray-600 mb-4">
+              Total Investment Fund Target: <span className="font-bold text-blue-600">RM {(funds[0]?.target_value || 0).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </p>
 
-            {/* Fixed Income Allocation */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-gray-700">🏦 Fixed Income (Bonds & Interest)</label>
-                <span className="text-lg font-bold text-green-600">{allocationPercentages.fixedIncome}%</span>
+            <div className="space-y-3">
+              {/* Equities */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-gray-800">📈 Equities (Stocks & Companies)</p>
+                    <p className="text-xs text-gray-600 mt-1">Diversified stock portfolio</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    {editingAllocation ? (
+                      <>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          value={tempAllocationPercentages.equities}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                            setTempAllocationPercentages({...tempAllocationPercentages, equities: val});
+                          }}
+                          className="w-12 px-2 py-1 border-2 border-blue-400 rounded text-sm font-medium"
+                        />
+                        <span className="text-lg font-bold text-blue-600">%</span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-blue-600">{allocationPercentages.equities}%</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600">Should invest:</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.fixedIncome}
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
-                    const remaining = 100 - newValue;
-                    if (remaining >= 0) {
-                      setAllocationPercentages({
-                        ...allocationPercentages,
-                        fixedIncome: newValue
-                      });
-                    }
-                  }}
-                  className="flex-1 h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.fixedIncome}
-                  onChange={(e) => {
-                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
-                    setAllocationPercentages({
-                      ...allocationPercentages,
-                      fixedIncome: newValue
-                    });
-                  }}
-                  className="w-16 px-2 py-1 border rounded text-sm"
-                />
-              </div>
-            </div>
 
-            {/* Alternatives Allocation */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-gray-700">💎 Alternatives (Crypto, Gold, etc.)</label>
-                <span className="text-lg font-bold text-purple-600">{allocationPercentages.alternatives}%</span>
+              {/* Fixed Income */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-gray-800">🏦 Fixed Income (Bonds & Interest)</p>
+                    <p className="text-xs text-gray-600 mt-1">Stable income-generating assets</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    {editingAllocation ? (
+                      <>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          value={tempAllocationPercentages.fixedIncome}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                            setTempAllocationPercentages({...tempAllocationPercentages, fixedIncome: val});
+                          }}
+                          className="w-12 px-2 py-1 border-2 border-green-400 rounded text-sm font-medium"
+                        />
+                        <span className="text-lg font-bold text-green-600">%</span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-green-600">{allocationPercentages.fixedIncome}%</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600">Should invest:</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.alternatives}
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
-                    const remaining = 100 - newValue;
-                    if (remaining >= 0) {
-                      setAllocationPercentages({
-                        ...allocationPercentages,
-                        alternatives: newValue
-                      });
-                    }
-                  }}
-                  className="flex-1 h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  value={allocationPercentages.alternatives}
-                  onChange={(e) => {
-                    const newValue = Math.max(0, Math.min(100, Number(e.target.value)));
-                    setAllocationPercentages({
-                      ...allocationPercentages,
-                      alternatives: newValue
-                    });
-                  }}
-                  className="w-16 px-2 py-1 border rounded text-sm"
-                />
-              </div>
-            </div>
 
-            {/* Total Allocation Display */}
-            <div className="border-t pt-3 mt-3">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-700">Total Allocation:</span>
-                <span className={`text-lg font-bold ${allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives === 100 ? 'text-green-600' : 'text-orange-600'}`}>
-                  {allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives}%
-                </span>
+              {/* Alternatives */}
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-gray-800">💎 Alternatives (Crypto, Gold, etc.)</p>
+                    <p className="text-xs text-gray-600 mt-1">Alternative investments</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    {editingAllocation ? (
+                      <>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          value={tempAllocationPercentages.alternatives}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                            setTempAllocationPercentages({...tempAllocationPercentages, alternatives: val});
+                          }}
+                          className="w-12 px-2 py-1 border-2 border-purple-400 rounded text-sm font-medium"
+                        />
+                        <span className="text-lg font-bold text-purple-600">%</span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-purple-600">{allocationPercentages.alternatives}%</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600">Should invest:</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
               </div>
-              {allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives !== 100 && (
-                <p className="text-xs text-orange-600 mt-1">⚠️ Total should equal 100% for balanced allocation</p>
+
+              {/* Cash & Cash Equivalent */}
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-gray-800">💰 Cash & Cash Equivalent</p>
+                    <p className="text-xs text-gray-600 mt-1">Liquid emergency reserves</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    {editingAllocation ? (
+                      <>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          value={tempAllocationPercentages.cash}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                            setTempAllocationPercentages({...tempAllocationPercentages, cash: val});
+                          }}
+                          className="w-12 px-2 py-1 border-2 border-amber-400 rounded text-sm font-medium"
+                        />
+                        <span className="text-lg font-bold text-amber-600">%</span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-amber-600">{allocationPercentages.cash}%</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600">Should invest:</p>
+                  <p className="text-2xl font-bold text-amber-600">
+                    RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
+              </div>
+
+              {/* Allocation Summary Chart */}
+              <div className="border-t pt-4 mt-4">
+                <p className="text-xs font-semibold text-gray-600 mb-3">Allocation Overview:</p>
+                <div className="flex h-10 rounded-lg overflow-hidden gap-0.5 bg-gray-100 p-0.5">
+                  <div 
+                    style={{width: `${editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%`}}
+                    className="bg-blue-500 rounded flex items-center justify-center"
+                  >
+                    {(editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%</span>}
+                  </div>
+                  <div 
+                    style={{width: `${editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%`}}
+                    className="bg-green-500 rounded flex items-center justify-center"
+                  >
+                    {(editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%</span>}
+                  </div>
+                  <div 
+                    style={{width: `${editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%`}}
+                    className="bg-purple-500 rounded flex items-center justify-center"
+                  >
+                    {(editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%</span>}
+                  </div>
+                  <div 
+                    style={{width: `${editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%`}}
+                    className="bg-amber-500 rounded flex items-center justify-center"
+                  >
+                    {(editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash) > 8 && <span className="text-white text-xs font-bold">{editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%</span>}
+                  </div>
+                </div>
+                <div className="flex gap-4 mt-3 text-xs flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                    <span>Equities ({editingAllocation ? tempAllocationPercentages.equities : allocationPercentages.equities}%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded"></div>
+                    <span>Fixed Income ({editingAllocation ? tempAllocationPercentages.fixedIncome : allocationPercentages.fixedIncome}%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                    <span>Alternatives ({editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-amber-500 rounded"></div>
+                    <span>Cash ({editingAllocation ? tempAllocationPercentages.cash : allocationPercentages.cash}%)</span>
+                  </div>
+                </div>
+                <div className="text-right mt-4 pt-4 border-t">
+                  <p className="text-xs text-gray-600">Total Allocation:</p>
+                  <p className={`text-lg font-bold ${(editingAllocation ? tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome + tempAllocationPercentages.alternatives + tempAllocationPercentages.cash : allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives + allocationPercentages.cash) === 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                    {editingAllocation ? tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome + tempAllocationPercentages.alternatives + tempAllocationPercentages.cash : allocationPercentages.equities + allocationPercentages.fixedIncome + allocationPercentages.alternatives + allocationPercentages.cash}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              {editingAllocation && (
+                <div className="flex gap-2 pt-4 border-t">
+                  <button
+                    onClick={async () => {
+                      if (tempAllocationPercentages.equities + tempAllocationPercentages.fixedIncome + tempAllocationPercentages.alternatives + tempAllocationPercentages.cash === 100) {
+                        try {
+                          await updateAllocationSettings(
+                            tempAllocationPercentages.equities,
+                            tempAllocationPercentages.fixedIncome,
+                            tempAllocationPercentages.alternatives,
+                            tempAllocationPercentages.cash
+                          );
+                          setAllocationPercentages(tempAllocationPercentages);
+                          setEditingAllocation(false);
+                          alert('Allocation percentages saved successfully!');
+                        } catch (error) {
+                          alert('Failed to save allocation settings: ' + error.message);
+                        }
+                      } else {
+                        alert('Total allocation must equal 100%');
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700 transition"
+                  >
+                    ✓ Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingAllocation(false);
+                      setTempAllocationPercentages(allocationPercentages);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-400 text-white rounded font-medium hover:bg-gray-500 transition"
+                  >
+                    ✕ Cancel
+                  </button>
+                </div>
               )}
             </div>
-
-            {/* Visual Allocation Chart */}
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-xs font-semibold text-gray-600 mb-2">Allocation Overview:</p>
-              <div className="flex h-8 rounded-lg overflow-hidden gap-0.5 bg-gray-100 p-0.5">
-                <div 
-                  style={{width: `${allocationPercentages.equities}%`}}
-                  className="bg-blue-500 rounded flex items-center justify-center"
-                >
-                  {allocationPercentages.equities > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.equities}%</span>}
-                </div>
-                <div 
-                  style={{width: `${allocationPercentages.fixedIncome}%`}}
-                  className="bg-green-500 rounded flex items-center justify-center"
-                >
-                  {allocationPercentages.fixedIncome > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.fixedIncome}%</span>}
-                </div>
-                <div 
-                  style={{width: `${allocationPercentages.alternatives}%`}}
-                  className="bg-purple-500 rounded flex items-center justify-center"
-                >
-                  {allocationPercentages.alternatives > 10 && <span className="text-white text-xs font-bold">{allocationPercentages.alternatives}%</span>}
-                </div>
-              </div>
-              <div className="flex gap-4 mt-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                  <span>Equities</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span>Fixed Income</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                  <span>Alternatives</span>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
-          <p className="font-medium text-amber-900 mb-1">💡 Tips:</p>
-          <ul className="text-amber-800 text-xs space-y-1 list-disc list-inside">
-            <li>Conservative: 70% Fixed Income, 20% Equities, 10% Alternatives</li>
-            <li>Balanced: 60% Equities, 30% Fixed Income, 10% Alternatives</li>
-            <li>Aggressive: 80% Equities, 15% Fixed Income, 5% Alternatives</li>
-            <li>Adjust based on your risk tolerance and investment goals</li>
-          </ul>
-        </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-sm">Add a Fund in Fund Management to see allocation strategy</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
