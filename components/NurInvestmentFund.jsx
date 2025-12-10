@@ -159,8 +159,8 @@ const NurInvestmentFund = () => {
     loadFunds();
   }, []);
 
-  // Find current user object by id if logged in
-  const currentUser = user ? profiles.find(p => p.id === user.id) : null;
+  // Find current user object by id if logged in - use user object directly since it has hasVotingAccess flag
+  const currentUser = user ? user : null;
 
   // Static data for charts and displays
   const initialAssetAllocation = [
