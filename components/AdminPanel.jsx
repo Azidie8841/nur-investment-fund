@@ -39,6 +39,9 @@ export default function AdminPanel({
   const [aValue, setAValue] = useState('');
   const [aColor, setAColor] = useState('#3b82f6');
 
+  // admin navigation state
+  const [activeAdminView, setActiveAdminView] = useState('dashboard'); // 'dashboard' or 'allocation-detail'
+
   // allocation percentage state
   const [allocationPercentages, setAllocationPercentages] = useState({
     equities: 60,
@@ -692,6 +695,203 @@ export default function AdminPanel({
 
   return (
     <div className="space-y-6">
+      {/* Allocation Detail View */}
+      {activeAdminView === 'allocation-detail' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <button 
+            onClick={() => setActiveAdminView('dashboard')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6"
+          >
+            <span>←</span> Back to Admin Dashboard
+          </button>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">💎 Alternative Investments Allocation</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Allocation Settings */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+              <h3 className="text-xl font-bold text-purple-900 mb-4">Allocation Target</h3>
+              
+              <div className="space-y-4">
+                <div className="bg-white rounded p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Total Investment Fund Target
+                  </label>
+                  <p className="text-2xl font-bold text-purple-600">
+                    RM {(funds[0]?.target_value || 0).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded p-4 border-l-4 border-purple-600">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Alternative Investments Allocation %
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      value={editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}
+                      onChange={(e) => {
+                        if (editingAllocation) {
+                          const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                          setTempAllocationPercentages({...tempAllocationPercentages, alternatives: val});
+                        }
+                      }}
+                      disabled={!editingAllocation}
+                      className="w-20 px-3 py-2 border-2 border-purple-400 rounded text-lg font-bold text-center disabled:bg-gray-100"
+                    />
+                    <span className="text-2xl font-bold text-purple-600">%</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Should Invest (from Target)
+                  </label>
+                  <p className="text-3xl font-bold text-purple-600">
+                    RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </p>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (!editingAllocation) {
+                      setTempAllocationPercentages(allocationPercentages);
+                      setEditingAllocation(true);
+                    } else {
+                      // Save changes
+                      setAllocationPercentages(tempAllocationPercentages);
+                      setEditingAllocation(false);
+                      alert('Allocation updated');
+                    }
+                  }}
+                  className={`w-full px-4 py-3 rounded font-semibold text-white transition ${
+                    editingAllocation
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {editingAllocation ? 'Save Changes' : 'Edit Allocation'}
+                </button>
+              </div>
+            </div>
+
+            {/* Current Alternative Investments Summary */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+              <h3 className="text-xl font-bold text-blue-900 mb-4">Current Holdings</h3>
+              
+              <div className="space-y-3">
+                {alternativeInvestments && alternativeInvestments.length > 0 ? (
+                  <>
+                    {alternativeInvestments.map((inv) => (
+                      <div key={inv.id} className="bg-white rounded p-3 border border-blue-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-900">{inv.name}</p>
+                            <p className="text-xs text-gray-600">{inv.asset_type}</p>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteAlternativeInvestment(inv.id)}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-xs text-gray-600">Quantity</p>
+                            <p className="font-semibold">{inv.quantity} {inv.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Value</p>
+                            <p className="font-semibold">RM {inv.current_value.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="bg-white rounded p-3 border-t-2 border-purple-400 mt-2 pt-3">
+                      <p className="text-sm text-gray-600">Total Invested</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        RM {alternativeInvestments.reduce((sum, inv) => sum + (inv.current_value || 0), 0).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-white rounded p-4 text-center text-gray-500">
+                    <p>No alternative investments yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Add New Alternative Investment Form */}
+          <div className="mt-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+            <h3 className="text-lg font-bold text-green-900 mb-4">Add New Alternative Investment</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input
+                type="text"
+                placeholder="Asset Name (e.g., Bitcoin, Gold)"
+                value={altName}
+                onChange={(e) => setAltName(e.target.value)}
+                className="px-3 py-2 border rounded"
+              />
+              <select
+                value={altType}
+                onChange={(e) => setAltType(e.target.value)}
+                className="px-3 py-2 border rounded"
+              >
+                <option value="Crypto">Cryptocurrency</option>
+                <option value="Metal">Precious Metal</option>
+                <option value="Commodity">Commodity</option>
+                <option value="Alternative">Other Alternative</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Quantity"
+                step="0.01"
+                value={altQuantity}
+                onChange={(e) => setAltQuantity(e.target.value)}
+                className="px-3 py-2 border rounded"
+              />
+              <input
+                type="text"
+                placeholder="Unit (e.g., BTC, oz, kg)"
+                value={altUnit}
+                onChange={(e) => setAltUnit(e.target.value)}
+                className="px-3 py-2 border rounded"
+              />
+              <input
+                type="number"
+                placeholder="Current Value (RM)"
+                step="0.01"
+                value={altValue}
+                onChange={(e) => setAltValue(e.target.value)}
+                className="px-3 py-2 border rounded col-span-2 md:col-span-1"
+              />
+              <input
+                type="text"
+                placeholder="Notes"
+                value={altNotes}
+                onChange={(e) => setAltNotes(e.target.value)}
+                className="w-full px-3 py-2 border rounded col-span-2 md:col-span-1"
+              />
+              <button 
+                onClick={handleAddAlternativeInvestment}
+                className="px-4 py-2 bg-green-600 text-white rounded font-semibold hover:bg-green-700 col-span-1 md:col-span-1"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Admin Dashboard View */}
+      {activeAdminView === 'dashboard' && (
+        <>
       <div className="flex items-center gap-4">
         <h2 className="text-2xl font-bold">Admin Panel</h2>
         <span className="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-semibold animate-pulse">ADMIN MODE</span>
@@ -905,28 +1105,35 @@ export default function AdminPanel({
       </div>
 
       {/* Asset Allocation Strategy Card */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div 
+        onClick={() => setActiveAdminView('allocation-detail')}
+        className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:bg-gray-50 transition"
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold">🎯 Asset Allocation Strategy</h3>
-          {funds.length > 0 && (
-            <button
-              onClick={() => {
-                if (!editingAllocation) {
-                  setTempAllocationPercentages(allocationPercentages);
-                  setEditingAllocation(true);
-                } else {
-                  setEditingAllocation(false);
-                }
-              }}
-              className={`px-3 py-1 rounded text-sm font-medium transition ${
-                editingAllocation
-                  ? 'bg-gray-400 text-white hover:bg-gray-500'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              {editingAllocation ? 'Cancel' : 'Edit'}
-            </button>
-          )}
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-blue-600 font-semibold">Click to manage →</span>
+            {funds.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!editingAllocation) {
+                    setTempAllocationPercentages(allocationPercentages);
+                    setEditingAllocation(true);
+                  } else {
+                    setEditingAllocation(false);
+                  }
+                }}
+                className={`px-3 py-1 rounded text-sm font-medium transition ${
+                  editingAllocation
+                    ? 'bg-gray-400 text-white hover:bg-gray-500'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {editingAllocation ? 'Cancel' : 'Edit'}
+              </button>
+            )}
+          </div>
         </div>
         
         {funds.length > 0 ? (
@@ -2055,6 +2262,8 @@ export default function AdminPanel({
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
