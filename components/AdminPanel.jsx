@@ -891,7 +891,7 @@ export default function AdminPanel({
 
       {/* Main Admin Dashboard View */}
       {activeAdminView === 'dashboard' && (
-        <>
+      <div className="space-y-6">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl font-bold">Admin Panel</h2>
         <span className="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-semibold animate-pulse">ADMIN MODE</span>
@@ -2262,7 +2262,7 @@ export default function AdminPanel({
           </table>
         </div>
       </div>
-        </>
+      </div>
       )}
     </div>
   );
