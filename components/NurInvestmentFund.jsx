@@ -900,47 +900,83 @@ const NurInvestmentFund = () => {
           <div className="grid grid-cols-2 gap-4 mb-8">
             {/* Bitcoin Card */}
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200 shadow-sm hover:shadow-md transition">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="font-semibold text-gray-800 text-sm">Bitcoin</h4>
+                  <h4 className="font-semibold text-gray-800">Bitcoin</h4>
                   <p className="text-xs text-gray-600 mt-1">Cryptocurrency asset</p>
                 </div>
-                <span className="text-2xl">₿</span>
+                <span className="text-3xl">₿</span>
               </div>
-              <div className="mt-4 pt-4 border-t border-orange-200">
-                <p className="text-3xl font-bold text-orange-600">{alternativeInvestments.find(a => a.name === 'Bitcoin')?.quantity || 0}</p>
-                <p className="text-xs text-gray-600 mt-2">{alternativeInvestments.find(a => a.name === 'Bitcoin')?.unit || 'BTC'}</p>
-                <p className="text-sm font-semibold text-orange-700 mt-4">Current Value: RM {(alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <div className="mt-3">
-                  <p className="text-xs text-gray-600 mb-1">Holdings</p>
-                  <div className="w-full bg-orange-200 rounded-full h-2">
-                    <div className="bg-orange-600 h-2 rounded-full" style={{width: '45%'}}></div>
-                  </div>
-                  <p className="text-xs text-orange-700 font-semibold mt-1">45.0%</p>
+
+              {/* Target Allocation Section */}
+              <div className="mb-4">
+                <p className="text-4xl font-bold text-orange-600">{allocationPercentages?.alternatives || 8}%</p>
+                <p className="text-xs text-gray-600 mt-1">Target allocation</p>
+                <p className="text-sm font-semibold text-orange-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              </div>
+
+              {/* Market Value Section */}
+              <div className="bg-white rounded p-3 mb-3">
+                <p className="text-xs text-gray-600">Market value</p>
+                <p className="text-lg font-bold text-orange-600">RM {(alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+
+              {/* BUY Amount Section */}
+              <div className="bg-orange-200 rounded p-3 mb-3">
+                <p className="text-xs font-semibold text-orange-900 mb-1">● BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              </div>
+
+              {/* Market Progress Section */}
+              <div>
+                <p className="text-xs text-gray-600 mb-2">Market progress</p>
+                <div className="w-full bg-orange-200 rounded-full h-3">
+                  <div 
+                    className="bg-orange-600 h-3 rounded-full transition-all" 
+                    style={{width: `${Math.min(100, ((alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0) / ((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100)) * 100)}%`}}
+                  ></div>
                 </div>
+                <p className="text-xs font-semibold text-orange-700 mt-2">{((alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0) / ((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) * 100).toFixed(1)}%</p>
               </div>
             </div>
 
             {/* Gold Card */}
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border border-yellow-200 shadow-sm hover:shadow-md transition">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="font-semibold text-gray-800 text-sm">Gold</h4>
+                  <h4 className="font-semibold text-gray-800">Gold</h4>
                   <p className="text-xs text-gray-600 mt-1">Precious metal asset</p>
                 </div>
-                <span className="text-2xl">🏆</span>
+                <span className="text-3xl">🏆</span>
               </div>
-              <div className="mt-4 pt-4 border-t border-yellow-200">
-                <p className="text-3xl font-bold text-yellow-600">{alternativeInvestments.find(a => a.name === 'Gold')?.quantity || 0}</p>
-                <p className="text-xs text-gray-600 mt-2">{alternativeInvestments.find(a => a.name === 'Gold')?.unit || 'oz'}</p>
-                <p className="text-sm font-semibold text-yellow-700 mt-4">Current Value: RM {(alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <div className="mt-3">
-                  <p className="text-xs text-gray-600 mb-1">Holdings</p>
-                  <div className="w-full bg-yellow-200 rounded-full h-2">
-                    <div className="bg-yellow-600 h-2 rounded-full" style={{width: '55%'}}></div>
-                  </div>
-                  <p className="text-xs text-yellow-700 font-semibold mt-1">55.0%</p>
+
+              {/* Target Allocation Section */}
+              <div className="mb-4">
+                <p className="text-4xl font-bold text-yellow-600">{allocationPercentages?.alternatives || 8}%</p>
+                <p className="text-xs text-gray-600 mt-1">Target allocation</p>
+                <p className="text-sm font-semibold text-yellow-700 mt-2">Should invest: RM {((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              </div>
+
+              {/* Market Value Section */}
+              <div className="bg-white rounded p-3 mb-3">
+                <p className="text-xs text-gray-600">Market value</p>
+                <p className="text-lg font-bold text-yellow-600">RM {(alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+
+              {/* BUY Amount Section */}
+              <div className="bg-yellow-200 rounded p-3 mb-3">
+                <p className="text-xs font-semibold text-yellow-900 mb-1">● BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+              </div>
+
+              {/* Market Progress Section */}
+              <div>
+                <p className="text-xs text-gray-600 mb-2">Market progress</p>
+                <div className="w-full bg-yellow-200 rounded-full h-3">
+                  <div 
+                    className="bg-yellow-600 h-3 rounded-full transition-all" 
+                    style={{width: `${Math.min(100, ((alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0) / ((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100)) * 100)}%`}}
+                  ></div>
                 </div>
+                <p className="text-xs font-semibold text-yellow-700 mt-2">{((alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0) / ((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) * 100).toFixed(1)}%</p>
               </div>
             </div>
           </div>
