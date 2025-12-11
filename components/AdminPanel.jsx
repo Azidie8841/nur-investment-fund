@@ -1105,35 +1105,28 @@ export default function AdminPanel({
       </div>
 
       {/* Asset Allocation Strategy Card */}
-      <div 
-        onClick={() => setActiveAdminView('allocation-detail')}
-        className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:bg-gray-50 transition"
-      >
+      <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold">🎯 Asset Allocation Strategy</h3>
-          <div className="flex gap-2 items-center">
-            <span className="text-xs text-blue-600 font-semibold">Click to manage →</span>
-            {funds.length > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!editingAllocation) {
-                    setTempAllocationPercentages(allocationPercentages);
-                    setEditingAllocation(true);
-                  } else {
-                    setEditingAllocation(false);
-                  }
-                }}
-                className={`px-3 py-1 rounded text-sm font-medium transition ${
-                  editingAllocation
-                    ? 'bg-gray-400 text-white hover:bg-gray-500'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {editingAllocation ? 'Cancel' : 'Edit'}
-              </button>
-            )}
-          </div>
+          {funds.length > 0 && (
+            <button
+              onClick={() => {
+                if (!editingAllocation) {
+                  setTempAllocationPercentages(allocationPercentages);
+                  setEditingAllocation(true);
+                } else {
+                  setEditingAllocation(false);
+                }
+              }}
+              className={`px-3 py-1 rounded text-sm font-medium transition ${
+                editingAllocation
+                  ? 'bg-gray-400 text-white hover:bg-gray-500'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {editingAllocation ? 'Cancel' : 'Edit'}
+            </button>
+          )}
         </div>
         
         {funds.length > 0 ? (
@@ -1216,11 +1209,14 @@ export default function AdminPanel({
               </div>
 
               {/* Alternatives */}
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div 
+                onClick={() => setActiveAdminView('allocation-detail')}
+                className="bg-purple-50 p-4 rounded-lg border border-purple-200 cursor-pointer hover:shadow-md hover:bg-purple-100 transition"
+              >
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <p className="font-medium text-gray-800">💎 Alternatives (Crypto, Gold, etc.)</p>
-                    <p className="text-xs text-gray-600 mt-1">Alternative investments</p>
+                    <p className="text-xs text-gray-600 mt-1">Click to manage</p>
                   </div>
                   <div className="flex gap-2 items-center">
                     {editingAllocation ? (
@@ -1235,6 +1231,7 @@ export default function AdminPanel({
                             setTempAllocationPercentages({...tempAllocationPercentages, alternatives: val});
                           }}
                           className="w-12 px-2 py-1 border-2 border-purple-400 rounded text-sm font-medium"
+                          onClick={(e) => e.stopPropagation()}
                         />
                         <span className="text-lg font-bold text-purple-600">%</span>
                       </>
