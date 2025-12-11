@@ -172,8 +172,25 @@ const NurInvestmentFund = () => {
   ];
   const [assetAllocation] = useState(initialAssetAllocation);
 
-  const initialGlobalMarketData = [
-    { year: '2025', equities: 3790.21, fixed: 925211.76 }
+  // Calculate market values from equitiesCompanies
+  const getMarketValuesByType = () => {
+    const indexFunds = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0);
+    const dividendStocks = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
+    const sevenValue = equitiesCompanies.filter(c => c.type && c.type.trim() === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0);
+    const growthStocks = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
+    
+    return {
+      equities: indexFunds + dividendStocks + sevenValue + growthStocks,
+      fixed: 0 // You can calculate this from bonds if needed
+    };
+  };
+
+  const globalMarketData = [
+    {
+      year: '2025',
+      equities: getMarketValuesByType().equities,
+      fixed: getMarketValuesByType().fixed
+    }
   ];
 
   const initialEquitiesData = [
@@ -1801,7 +1818,7 @@ const NurInvestmentFund = () => {
         <h3 className="text-sm font-semibold mb-1 text-slate-300">Historical Investments (Yearly)</h3>
         <p className="text-xs text-slate-500 mb-4">As of Dec 5, 2025. Asset class values shown in RM.</p>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={initialGlobalMarketData}>
+          <BarChart data={globalMarketData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis dataKey="year" stroke="#94a3b8" />
             <YAxis stroke="#94a3b8" />
