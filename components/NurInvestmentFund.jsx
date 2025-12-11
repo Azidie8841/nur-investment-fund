@@ -173,17 +173,7 @@ const NurInvestmentFund = () => {
   const [assetAllocation] = useState(initialAssetAllocation);
 
   const initialGlobalMarketData = [
-    { year: '1990', equities: 50, fixed: 30, real: 10, renewable: 0 },
-    { year: '1995', equities: 80, fixed: 50, real: 15, renewable: 0 },
-    { year: '2000', equities: 120, fixed: 70, real: 25, renewable: 2 },
-    { year: '2005', equities: 180, fixed: 100, real: 40, renewable: 5 },
-    { year: '2010', equities: 250, fixed: 140, real: 60, renewable: 15 },
-    { year: '2015', equities: 380, fixed: 200, real: 90, renewable: 35 },
-    { year: '2020', equities: 520, fixed: 280, real: 130, renewable: 55 },
-    { year: '2021', equities: 580, fixed: 310, real: 145, renewable: 65 },
-    { year: '2022', equities: 620, fixed: 340, real: 160, renewable: 72 },
-    { year: '2023', equities: 680, fixed: 380, real: 180, renewable: 80 },
-    { year: '2024', equities: 700, fixed: 390, real: 185, renewable: 84 }
+    { year: '2025', equities: 3790.21, fixed: 925211.76 }
   ];
 
   const initialEquitiesData = [
@@ -1808,14 +1798,17 @@ const NurInvestmentFund = () => {
 
       {/* Historical Investments Chart */}
       <div className="bg-slate-900 rounded-lg border border-slate-700 mt-12" style={{maxWidth: '100%', margin: '3rem auto 0', padding: '1.5rem'}}>
-        <h3 className="text-sm font-semibold mb-1 text-slate-300">Historical Investments</h3>
-        <p className="text-xs text-slate-500 mb-4">Values are in billion RM as of Dec 5, 2025. The left y-axis shows the fund's total value. The right y-axis shows the value of the asset classes.</p>
+        <h3 className="text-sm font-semibold mb-1 text-slate-300">Historical Investments (Yearly)</h3>
+        <p className="text-xs text-slate-500 mb-4">As of Dec 5, 2025. Asset class values shown in RM.</p>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={initialGlobalMarketData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis dataKey="year" stroke="#94a3b8" />
             <YAxis stroke="#94a3b8" />
-            <Tooltip contentStyle={{backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#cbd5e1'}} />
+            <Tooltip 
+              contentStyle={{backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#cbd5e1'}}
+              formatter={(value) => 'RM ' + value.toLocaleString('en-US', {maximumFractionDigits: 2})}
+            />
             <Legend wrapperStyle={{color: '#94a3b8'}} />
             <Bar dataKey="equities" stackId="a" fill="#3b82f6" name="Equity Investments" radius={[4, 4, 0, 0]} />
             <Bar dataKey="fixed" stackId="a" fill="#10b981" name="Fixed-income Investments" radius={[4, 4, 0, 0]} />
