@@ -172,24 +172,36 @@ const NurInvestmentFund = () => {
   ];
   const [assetAllocation] = useState(initialAssetAllocation);
 
-  // Calculate market values from equitiesCompanies
-  const getMarketValuesByType = () => {
+  // Calculate market values from all asset classes
+  const getAssetClassValues = () => {
+    // Equity: Sum of all four investment types
     const indexFunds = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Index Funds & ETF').reduce((sum, c) => sum + (c.value || 0), 0);
     const dividendStocks = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Dividend Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
     const sevenValue = equitiesCompanies.filter(c => c.type && c.type.trim() === '7 Value Magnificent').reduce((sum, c) => sum + (c.value || 0), 0);
     const growthStocks = equitiesCompanies.filter(c => c.type && c.type.trim() === 'Growth Stocks').reduce((sum, c) => sum + (c.value || 0), 0);
+    const equities = indexFunds + dividendStocks + sevenValue + growthStocks;
+    
+    // Fixed Income: Sum of all bonds
+    const fixedIncome = fixedIncomeBonds.reduce((sum, b) => sum + (b.current_value || 0), 0);
+    
+    // Alternative Assets: Sum of alternative investments
+    const alternatives = alternativeInvestments.reduce((sum, a) => sum + (a.current_value || 0), 0);
+    
+    // Cash (hardcoded for now - can be updated from actual data)
+    const cash = 50000;
     
     return {
-      equities: indexFunds + dividendStocks + sevenValue + growthStocks,
-      fixed: 0 // You can calculate this from bonds if needed
+      equities: Math.round(equities * 100) / 100,
+      fixed: Math.round(fixedIncome * 100) / 100,
+      alternatives: Math.round(alternatives * 100) / 100,
+      cash: cash
     };
   };
 
   const globalMarketData = [
     {
       year: '2025',
-      equities: getMarketValuesByType().equities,
-      fixed: getMarketValuesByType().fixed
+      ...getAssetClassValues()
     }
   ];
 
@@ -1412,6 +1424,58 @@ const NurInvestmentFund = () => {
           </div>
         </div>
 
+        {/* Alternative Investments Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">Alternative Investments</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Bitcoin Card */}
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Bitcoin</h4>
+                  <p className="text-xs text-gray-600 mt-1">Cryptocurrency asset</p>
+                </div>
+                <span className="text-2xl">₿</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-orange-200">
+                <p className="text-3xl font-bold text-orange-600">{alternativeInvestments.find(a => a.name === 'Bitcoin')?.quantity || 0}</p>
+                <p className="text-xs text-gray-600 mt-2">{alternativeInvestments.find(a => a.name === 'Bitcoin')?.unit || 'BTC'}</p>
+                <p className="text-sm font-semibold text-orange-700 mt-4">Current Value: RM {(alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Holdings</p>
+                  <div className="w-full bg-orange-200 rounded-full h-2">
+                    <div className="bg-orange-600 h-2 rounded-full" style={{width: '45%'}}></div>
+                  </div>
+                  <p className="text-xs text-orange-700 font-semibold mt-1">45.0%</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Gold Card */}
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border border-yellow-200 shadow-sm hover:shadow-md transition">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Gold</h4>
+                  <p className="text-xs text-gray-600 mt-1">Precious metal asset</p>
+                </div>
+                <span className="text-2xl">🏆</span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-yellow-200">
+                <p className="text-3xl font-bold text-yellow-600">{alternativeInvestments.find(a => a.name === 'Gold')?.quantity || 0}</p>
+                <p className="text-xs text-gray-600 mt-2">{alternativeInvestments.find(a => a.name === 'Gold')?.unit || 'oz'}</p>
+                <p className="text-sm font-semibold text-yellow-700 mt-4">Current Value: RM {(alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-1">Holdings</p>
+                  <div className="w-full bg-yellow-200 rounded-full h-2">
+                    <div className="bg-yellow-600 h-2 rounded-full" style={{width: '55%'}}></div>
+                  </div>
+                  <p className="text-xs text-yellow-700 font-semibold mt-1">55.0%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Companies (8,314)</h3>
@@ -1829,6 +1893,8 @@ const NurInvestmentFund = () => {
             <Legend wrapperStyle={{color: '#94a3b8'}} />
             <Bar dataKey="equities" stackId="a" fill="#3b82f6" name="Equity Investments" radius={[4, 4, 0, 0]} />
             <Bar dataKey="fixed" stackId="a" fill="#10b981" name="Fixed-income Investments" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="alternatives" stackId="a" fill="#8b5cf6" name="Alternative Assets" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="cash" stackId="a" fill="#6b7280" name="Cash" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
