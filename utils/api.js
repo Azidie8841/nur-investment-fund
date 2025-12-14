@@ -777,3 +777,63 @@ export const updateAllocationSettings = async (equities, fixedIncome, alternativ
     throw error;
   }
 };
+
+// Monthly Investments
+export const fetchMonthlyInvestments = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/monthly-investments`);
+    const data = await handleResponse(res);
+    console.log('Fetched monthly investments:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching monthly investments:', error);
+    throw error;
+  }
+};
+
+export const addMonthlyInvestment = async (investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/monthly-investments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Added monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding monthly investment:', error);
+    throw error;
+  }
+};
+
+export const updateMonthlyInvestment = async (id, investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/monthly-investments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating monthly investment:', error);
+    throw error;
+  }
+};
+
+export const deleteMonthlyInvestment = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/monthly-investments/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting monthly investment:', error);
+    throw error;
+  }
+};

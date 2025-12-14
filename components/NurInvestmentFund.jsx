@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds, fetchMonthlyInvestments, addMonthlyInvestment, updateMonthlyInvestment, deleteMonthlyInvestment } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -38,6 +38,7 @@ const NurInvestmentFund = () => {
   const [alternativeInvestments, setAlternativeInvestments] = useState([]);
   const [alternativeInvestmentMonthlyData, setAlternativeInvestmentMonthlyData] = useState({});
   const [selectedAlternativeInvestment, setSelectedAlternativeInvestment] = useState(null);
+  const [monthlyInvestments, setMonthlyInvestments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [funds, setFunds] = useState([]);
@@ -58,6 +59,16 @@ const NurInvestmentFund = () => {
     cash: 2
   });
 
+  // Monthly Investments state
+  const [showAddMonthlyInvestmentModal, setShowAddMonthlyInvestmentModal] = useState(false);
+  const [editingMonthlyInvestment, setEditingMonthlyInvestment] = useState(null);
+  const [monthlyInvestmentForm, setMonthlyInvestmentForm] = useState({
+    month: '',
+    amount_added: 0,
+    total_invested: 0,
+    value: 0
+  });
+
   // Load data from API on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -74,6 +85,15 @@ const NurInvestmentFund = () => {
           fetchSavingsGoals(),
           fetchAlternativeInvestments()
         ]);
+        
+        // Fetch monthly investments separately
+        let monthlyInvData = [];
+        try {
+          monthlyInvData = await fetchMonthlyInvestments();
+        } catch (err) {
+          console.warn('Could not load monthly investments:', err);
+          monthlyInvData = [];
+        }
         
         // Fetch dividends separately with error handling
         let dividends = {};
@@ -116,6 +136,7 @@ const NurInvestmentFund = () => {
         setSavingsGoals(goals);
         setAlternativeInvestments(altInvestments);
         setAlternativeInvestmentMonthlyData(altMonthlyData);
+        setMonthlyInvestments(monthlyInvData);
         setError(null);
       } catch (err) {
         console.error('Error loading data from API:', err);
@@ -916,15 +937,13 @@ const NurInvestmentFund = () => {
               </div>
 
               {/* Market Value Section */}
-              <div className="bg-white rounded p-3 mb-3">
+              <div className="mb-3">
                 <p className="text-xs text-gray-600">Market value</p>
                 <p className="text-lg font-bold text-orange-600">RM {(alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
 
               {/* BUY Amount Section */}
-              <div className="bg-orange-200 rounded p-3 mb-3">
-                <p className="text-xs font-semibold text-orange-900 mb-1">● BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-              </div>
+              <p className="text-sm font-semibold text-blue-700 mt-3 bg-blue-50 rounded p-3 mb-3">🔵 BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Bitcoin')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
 
               {/* Market Progress Section */}
               <div>
@@ -957,15 +976,13 @@ const NurInvestmentFund = () => {
               </div>
 
               {/* Market Value Section */}
-              <div className="bg-white rounded p-3 mb-3">
+              <div className="mb-3">
                 <p className="text-xs text-gray-600">Market value</p>
                 <p className="text-lg font-bold text-yellow-600">RM {(alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
 
               {/* BUY Amount Section */}
-              <div className="bg-yellow-200 rounded p-3 mb-3">
-                <p className="text-xs font-semibold text-yellow-900 mb-1">● BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-              </div>
+              <p className="text-sm font-semibold text-blue-700 mt-3 bg-blue-50 rounded p-3 mb-3">🔵 BUY: RM {(((funds[0]?.target_value || 0) * (allocationPercentages?.alternatives || 8) / 100) - (alternativeInvestments.find(a => a.name === 'Gold')?.current_value || 0)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
 
               {/* Market Progress Section */}
               <div>
@@ -1202,11 +1219,150 @@ const NurInvestmentFund = () => {
             </table>
           </div>
         </div>
+
+        {/* Monthly Investments Tracking Table */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Monthly Investments (2025)</h3>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setShowAddMonthlyInvestmentModal(true)}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition"
+              >
+                + Add
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Month</th>
+                  <th className="px-4 py-2 text-left font-semibold">Add</th>
+                  <th className="px-4 py-2 text-left font-semibold">Total Invested</th>
+                  <th className="px-4 py-2 text-left font-semibold">Value</th>
+                  <th className="px-4 py-2 text-left font-semibold">Profit</th>
+                  <th className="px-4 py-2 text-left font-semibold">Return</th>
+                  {user?.role === 'admin' && (
+                    <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyInvestments.map((inv) => (
+                  <tr key={inv.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-2">{inv.month}</td>
+                    <td className="px-4 py-2">RM {Number(inv.amount_added).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2">RM {Number(inv.total_invested).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2 font-semibold">RM {Number(inv.value).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2" style={{ color: Number(inv.profit) >= 0 ? '#10b981' : '#ef4444' }}>
+                      {Number(inv.profit) >= 0 ? '+' : ''}RM {Number(inv.profit).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2" style={{ color: Number(inv.return_percentage) >= 0 ? '#10b981' : '#ef4444' }}>
+                      {Number(inv.return_percentage) >= 0 ? '+' : ''}{Number(inv.return_percentage).toFixed(2)}%
+                    </td>
+                    {user?.role === 'admin' && (
+                      <td className="px-4 py-2 space-x-2">
+                        <button
+                          onClick={() => {
+                            setEditingMonthlyInvestment(inv);
+                            setMonthlyInvestmentForm({
+                              month: inv.month,
+                              amount_added: inv.amount_added,
+                              total_invested: inv.total_invested,
+                              value: inv.value
+                            });
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMonthlyInvestment(inv.id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Add/Edit Monthly Investment Modal */}
+        {(showAddMonthlyInvestmentModal || editingMonthlyInvestment) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h3 className="text-lg font-semibold mb-4">
+                {editingMonthlyInvestment ? 'Edit Monthly Investment' : 'Add Monthly Investment'}
+              </h3>
+              <form onSubmit={(e) => handleSaveMonthlyInvestment(e)}>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Month (e.g., Jan)"
+                    value={monthlyInvestmentForm.month}
+                    onChange={(e) => setMonthlyInvestmentForm({...monthlyInvestmentForm, month: e.target.value})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Amount Added"
+                    value={monthlyInvestmentForm.amount_added}
+                    onChange={(e) => setMonthlyInvestmentForm({...monthlyInvestmentForm, amount_added: parseFloat(e.target.value)})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Total Invested"
+                    value={monthlyInvestmentForm.total_invested}
+                    onChange={(e) => setMonthlyInvestmentForm({...monthlyInvestmentForm, total_invested: parseFloat(e.target.value)})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Value"
+                    value={monthlyInvestmentForm.value}
+                    onChange={(e) => setMonthlyInvestmentForm({...monthlyInvestmentForm, value: parseFloat(e.target.value)})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 text-white rounded py-2 hover:bg-blue-700 transition"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddMonthlyInvestmentModal(false);
+                      setEditingMonthlyInvestment(null);
+                      setMonthlyInvestmentForm({ month: '', amount_added: 0, total_invested: 0, value: 0 });
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 rounded py-2 hover:bg-gray-400 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
-
-  // Get most recent monthly value for a company
   const getRecentMonthlyValue = (companyName) => {
     const monthlyData = assetMonthlyData[companyName];
     if (!monthlyData) return 0;
@@ -1524,25 +1680,61 @@ const NurInvestmentFund = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left py-3 px-4 font-semibold">Asset</th>
+                  <th className="text-right py-3 px-4 font-semibold">Total Invested (RM)</th>
                   <th className="text-right py-3 px-4 font-semibold">Market Value (RM)</th>
                   <th className="text-left py-3 px-4 font-semibold">Sector</th>
                   <th className="text-left py-3 px-4 font-semibold">Type</th>
                   <th className="text-left py-3 px-4 font-semibold">Country</th>
+                  <th className="text-right py-3 px-4 font-semibold">Profit (RM)</th>
+                  <th className="text-right py-3 px-4 font-semibold">Return %</th>
                 </tr>
               </thead>
               <tbody>
                 {equitiesCompanies.map((company, idx) => {
-                  const recentValue = getRecentMonthlyValue(company.name);
+                  const monthlyData = assetMonthlyData[company.name] || {};
+                  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                  
+                  // Get latest month value
+                  let latestValue = company.value;
+                  for (let i = months.length - 1; i >= 0; i--) {
+                    if (monthlyData[months[i]] && monthlyData[months[i]] > 0) {
+                      latestValue = monthlyData[months[i]];
+                      break;
+                    }
+                  }
+                  
+                  // Get latest month's total invested from monthlyInvestments table
+                  let latestMonthTotalInvested = 0;
+                  if (monthlyInvestments.length > 0) {
+                    // Get the last entry (latest month)
+                    const latestMonthData = monthlyInvestments[monthlyInvestments.length - 1];
+                    latestMonthTotalInvested = latestMonthData?.total_invested || 0;
+                  }
+                  
+                  const recentValue = latestValue;
                   const displayValue = recentValue > 0 ? recentValue * 3.7 : company.value * 3.7;
+                  const totalInvestedDisplay = latestMonthTotalInvested;
+                  
+                  // Calculate profit and return based on latest month's total invested
+                  const profit = latestMonthTotalInvested > 0 ? displayValue - latestMonthTotalInvested : 0;
+                  const returnPercent = latestMonthTotalInvested > 0 ? ((profit / latestMonthTotalInvested) * 100) : 0;
+                  
                   return (
                     <tr key={idx} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedAsset(company.name)}>
                       <td className="py-3 px-4">
                         <a className="text-blue-600 hover:underline">{company.name}</a>
                       </td>
+                      <td className="py-3 px-4 text-right">RM {totalInvestedDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4 text-right">RM {displayValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4">{company.sector}</td>
                       <td className="py-3 px-4"><span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{company.type || 'Index Funds & ETF'}</span></td>
                       <td className="py-3 px-4">{company.country}</td>
+                      <td className="py-3 px-4 text-right" style={{ color: profit >= 0 ? '#10b981' : '#ef4444' }}>
+                        {profit >= 0 ? '+' : ''}RM {profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-right" style={{ color: returnPercent >= 0 ? '#10b981' : '#ef4444' }}>
+                        {returnPercent >= 0 ? '+' : ''}{returnPercent.toFixed(2)}%
+                      </td>
                     </tr>
                   );
                 })}
@@ -2966,6 +3158,43 @@ const NurInvestmentFund = () => {
         </div>
       </div>
     );
+  };
+
+  // Monthly Investment Handlers
+  const handleSaveMonthlyInvestment = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editingMonthlyInvestment) {
+        // Update existing
+        const updated = await updateMonthlyInvestment(editingMonthlyInvestment.id, monthlyInvestmentForm);
+        setMonthlyInvestments(monthlyInvestments.map(inv => inv.id === editingMonthlyInvestment.id ? updated : inv));
+      } else {
+        // Add new
+        const newRecord = await addMonthlyInvestment(monthlyInvestmentForm);
+        setMonthlyInvestments([...monthlyInvestments, newRecord]);
+      }
+      
+      // Reset form and close modal
+      setShowAddMonthlyInvestmentModal(false);
+      setEditingMonthlyInvestment(null);
+      setMonthlyInvestmentForm({ month: '', amount_added: 0, total_invested: 0, value: 0 });
+    } catch (err) {
+      console.error('Error saving monthly investment:', err.message || err);
+      alert(`Failed to save monthly investment: ${err.message || 'Unknown error. Please check console.'}`);
+    }
+  };
+
+  const handleDeleteMonthlyInvestment = async (id) => {
+    if (confirm('Are you sure you want to delete this monthly investment record?')) {
+      try {
+        await deleteMonthlyInvestment(id);
+        setMonthlyInvestments(monthlyInvestments.filter(inv => inv.id !== id));
+      } catch (err) {
+        console.error('Error deleting monthly investment:', err);
+        alert('Failed to delete monthly investment. Please try again.');
+      }
+    }
   };
 
   const renderContent = () => {

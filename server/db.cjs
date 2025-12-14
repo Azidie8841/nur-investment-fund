@@ -387,6 +387,7 @@ const initializeDb = () => {
       unit_price REAL,
       current_value REAL NOT NULL,
       cost REAL,
+      allocation REAL DEFAULT 0,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -417,6 +418,21 @@ const initializeDb = () => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(investment_name) REFERENCES alternative_investments(name),
       UNIQUE(investment_name)
+    )
+  `);
+
+  // Monthly Investment Tracking table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS monthly_investments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month TEXT NOT NULL UNIQUE,
+      amount_added REAL DEFAULT 0,
+      total_invested REAL DEFAULT 0,
+      value REAL DEFAULT 0,
+      profit REAL GENERATED ALWAYS AS (value - total_invested) STORED,
+      return_percentage REAL GENERATED ALWAYS AS (CASE WHEN total_invested > 0 THEN (profit / total_invested * 100) ELSE 0 END) STORED,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -510,6 +526,30 @@ const initializeDb = () => {
     insertGoal.run('Primary Goal', 500000, '2031-12-31', 'Active', 'Long-term wealth accumulation');
     insertGoal.run('Emergency Fund', 50000, '2025-12-31', 'On Track', 'Emergency savings for 6 months');
   }
+
+  // Monthly Investment Tracking data
+  const monthlyInvestmentCount = db.prepare('SELECT COUNT(*) as count FROM monthly_investments').get().count;
+  
+  if (monthlyInvestmentCount === 0) {
+    const insertMonthlyInvestment = db.prepare(`
+      INSERT INTO monthly_investments (month, amount_added, total_invested, value)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    // Sample data for 2025
+    insertMonthlyInvestment.run('Jan', 300, 300, 310);
+    insertMonthlyInvestment.run('Feb', 300, 600, 630);
+    insertMonthlyInvestment.run('Mar', 300, 900, 960);
+    insertMonthlyInvestment.run('Apr', 300, 1200, 1300);
+    insertMonthlyInvestment.run('May', 300, 1500, 1650);
+    insertMonthlyInvestment.run('Jun', 300, 1800, 2010);
+    insertMonthlyInvestment.run('Jul', 300, 2100, 2400);
+    insertMonthlyInvestment.run('Aug', 300, 2400, 2760);
+    insertMonthlyInvestment.run('Sep', 300, 2700, 3150);
+    insertMonthlyInvestment.run('Oct', 300, 3000, 3570);
+    insertMonthlyInvestment.run('Nov', 300, 3300, 4020);
+    insertMonthlyInvestment.run('Dec', 300, 3600, 4500);
+  }
   
   // Create strategic plans table safely
   createStrategicPlansTableSafely();
@@ -526,18 +566,15 @@ const migrateAlternativeInvestments = () => {
     const tableInfo = db.prepare('PRAGMA table_info(alternative_investments)').all();
     const columnNames = tableInfo.map(col => col.name);
     
-    const requiredColumns = ['id', 'name', 'asset_type', 'platform', 'quantity', 'unit_price', 'current_value', 'cost', 'notes', 'created_at', 'updated_at'];
-    const missingColumns = requiredColumns.filter(col => !columnNames.includes(col));
-    
-    if (missingColumns.length > 0) {
-      console.log(`Migrating alternative_investments table. Missing columns: ${missingColumns.join(', ')}`);
+    // Check if allocation column exists
+    if (!columnNames.includes('allocation')) {
+      console.log('Adding allocation column to alternative_investments table');
       
-      // Start transaction for safe migration
       executeTransaction(() => {
-        // Create backup before migration
+        // Create backup
         backupDatabase();
         
-        // Create temporary table with correct schema
+        // Create new table with correct schema
         db.exec(`
           CREATE TABLE alternative_investments_new (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -548,38 +585,26 @@ const migrateAlternativeInvestments = () => {
             unit_price REAL,
             current_value REAL NOT NULL,
             cost REAL,
+            allocation REAL DEFAULT 0,
             notes TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `);
         
-        // Copy existing data to new table
-        const oldData = db.prepare(`
-          SELECT 
-            id, name, asset_type, 
-            COALESCE(quantity, 0) as quantity,
-            current_value, notes, created_at, updated_at
+        // Copy existing data, setting allocation to 0 for all rows
+        db.exec(`
+          INSERT INTO alternative_investments_new 
+          SELECT id, name, asset_type, platform, quantity, unit_price, current_value, cost, 0, notes, created_at, updated_at
           FROM alternative_investments
-        `).all();
-        
-        const insertStmt = db.prepare(`
-          INSERT INTO alternative_investments_new (id, name, asset_type, quantity, current_value, notes, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
-        oldData.forEach(row => {
-          insertStmt.run(row.id, row.name, row.asset_type, row.quantity, row.current_value, row.notes, row.created_at, row.updated_at);
-        });
-        
-        // Drop old table
+        // Drop old table and rename new one
         db.exec(`DROP TABLE alternative_investments`);
-        
-        // Rename new table
         db.exec(`ALTER TABLE alternative_investments_new RENAME TO alternative_investments`);
         
-        console.log('✓ Migration completed successfully');
-      }, 'Migrate alternative_investments table');
+        console.log('✓ Allocation column added successfully');
+      }, 'Add allocation column to alternative_investments');
     }
   } catch (error) {
     console.error(`Migration error: ${error.message}`);

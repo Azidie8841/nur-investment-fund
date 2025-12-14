@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund, fetchAllocationSettings, updateAllocationSettings } from '../utils/api';
+import { addEquitiesCompany, updateEquitiesCompany, deleteEquitiesCompany, addFixedIncomeBond, updateFixedIncomeBond, deleteFixedIncomeBond, updateAssetMonthlyData, updateFixedIncomeMonthlyData, updateBondMonthlyDividends, updateBondMonthlyValues, createDatabaseBackup, listDatabaseBackups, restoreDatabaseBackup, addSavingsRecord, addSavingsGoal, updateSavingsGoal, deleteSavingsRecord, deleteSavingsGoal, fetchSavingsRecords, fetchSavingsGoals, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, fetchFunds, addFund, updateFund, deleteFund, fetchAllocationSettings, updateAllocationSettings, fetchAlternativeInvestments } from '../utils/api';
 
 export default function AdminPanel({
   equitiesCompanies,
@@ -56,7 +56,9 @@ export default function AdminPanel({
     equities: 60,
     fixedIncome: 30,
     alternatives: 8,
-    cash: 2
+    cash: 2,
+    bitcoinAllocation: 5,
+    goldAllocation: 3
   });
   const [hoveredSegment, setHoveredSegment] = useState(null);
 
@@ -705,15 +707,22 @@ export default function AdminPanel({
             <span>←</span> Back to Admin Dashboard
           </button>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">💎 Alternative Investments Allocation</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">💎 Alternative Investments Allocation</h2>
+          
+          <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-lg p-4 mb-6 shadow-md">
+            <p className="text-sm text-purple-100 mb-1">Total Value Alternative Investment</p>
+            <p className="text-3xl font-bold text-white">
+              RM {((funds[0]?.target_value || 0) * (allocationPercentages.alternatives / 100)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+          </div>
 
-          {/* Bitcoin and Gold Allocation Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Bitcoin and Gold Allocation Cards - Side by Side */}
+          <div className="grid grid-cols-2 gap-6">
             {/* Bitcoin Card */}
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200 shadow-sm hover:shadow-md transition">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-xl font-bold text-gray-800">Bitcoin</h4>
+                  <h4 className="text-xl font-bold text-white">Bitcoin</h4>
                   <p className="text-xs text-gray-600 mt-1">Cryptocurrency asset</p>
                 </div>
                 <span className="text-4xl">₿</span>
@@ -727,11 +736,11 @@ export default function AdminPanel({
                     type="number" 
                     min="0" 
                     max="100" 
-                    value={editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}
+                    value={editingAllocation ? tempAllocationPercentages.bitcoinAllocation : (alternativeInvestments.find(a => a.name === 'Bitcoin')?.allocation || 0)}
                     onChange={(e) => {
                       if (editingAllocation) {
                         const val = Math.max(0, Math.min(100, Number(e.target.value)));
-                        setTempAllocationPercentages({...tempAllocationPercentages, alternatives: val});
+                        setTempAllocationPercentages({...tempAllocationPercentages, bitcoinAllocation: val});
                       }
                     }}
                     disabled={!editingAllocation}
@@ -745,7 +754,7 @@ export default function AdminPanel({
               <div className="bg-orange-100 rounded-lg p-4">
                 <p className="text-xs text-gray-600 mb-1">Should invest</p>
                 <p className="text-3xl font-bold text-orange-600">
-                  RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  RM {(((funds[0]?.target_value || 0) * (allocationPercentages.alternatives / 100)) * ((editingAllocation ? tempAllocationPercentages.bitcoinAllocation : (alternativeInvestments.find(a => a.name === 'Bitcoin')?.allocation || 0)) / 100)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </p>
               </div>
             </div>
@@ -754,7 +763,7 @@ export default function AdminPanel({
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border border-yellow-200 shadow-sm hover:shadow-md transition">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-xl font-bold text-gray-800">Gold</h4>
+                  <h4 className="text-xl font-bold text-white">Gold</h4>
                   <p className="text-xs text-gray-600 mt-1">Precious metal asset</p>
                 </div>
                 <span className="text-4xl">🏆</span>
@@ -768,11 +777,11 @@ export default function AdminPanel({
                     type="number" 
                     min="0" 
                     max="100" 
-                    value={editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives}
+                    value={editingAllocation ? tempAllocationPercentages.goldAllocation : (alternativeInvestments.find(a => a.name === 'Gold')?.allocation || 0)}
                     onChange={(e) => {
                       if (editingAllocation) {
                         const val = Math.max(0, Math.min(100, Number(e.target.value)));
-                        setTempAllocationPercentages({...tempAllocationPercentages, alternatives: val});
+                        setTempAllocationPercentages({...tempAllocationPercentages, goldAllocation: val});
                       }
                     }}
                     disabled={!editingAllocation}
@@ -786,7 +795,7 @@ export default function AdminPanel({
               <div className="bg-yellow-100 rounded-lg p-4">
                 <p className="text-xs text-gray-600 mb-1">Should invest</p>
                 <p className="text-3xl font-bold text-yellow-600">
-                  RM {((funds[0]?.target_value || 0) * (editingAllocation ? tempAllocationPercentages.alternatives : allocationPercentages.alternatives) / 100).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  RM {(((funds[0]?.target_value || 0) * (allocationPercentages.alternatives / 100)) * ((editingAllocation ? tempAllocationPercentages.goldAllocation : (alternativeInvestments.find(a => a.name === 'Gold')?.allocation || 0)) / 100)).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </p>
               </div>
             </div>
@@ -796,13 +805,48 @@ export default function AdminPanel({
           <button
             onClick={async () => {
               if (!editingAllocation) {
-                setTempAllocationPercentages(allocationPercentages);
+                setTempAllocationPercentages({...allocationPercentages, bitcoinAllocation: alternativeInvestments.find(a => a.name === 'Bitcoin')?.allocation || 5, goldAllocation: alternativeInvestments.find(a => a.name === 'Gold')?.allocation || 3});
                 setEditingAllocation(true);
               } else {
                 // Save changes
-                setAllocationPercentages(tempAllocationPercentages);
+                setAllocationPercentages({equities: tempAllocationPercentages.equities, fixedIncome: tempAllocationPercentages.fixedIncome, alternatives: tempAllocationPercentages.alternatives, cash: tempAllocationPercentages.cash});
+                
+                let updateSuccess = true;
+                
+                // Update Bitcoin allocation
+                const bitcoin = alternativeInvestments.find(a => a.name === 'Bitcoin');
+                if (bitcoin) {
+                  try {
+                    const updatedBitcoin = await updateAlternativeInvestment(bitcoin.id, {...bitcoin, allocation: tempAllocationPercentages.bitcoinAllocation});
+                    console.log('Bitcoin updated:', updatedBitcoin);
+                  } catch (e) {
+                    console.error('Error updating Bitcoin:', e);
+                    updateSuccess = false;
+                  }
+                }
+                
+                // Update Gold allocation
+                const gold = alternativeInvestments.find(a => a.name === 'Gold');
+                if (gold) {
+                  try {
+                    const updatedGold = await updateAlternativeInvestment(gold.id, {...gold, allocation: tempAllocationPercentages.goldAllocation});
+                    console.log('Gold updated:', updatedGold);
+                  } catch (e) {
+                    console.error('Error updating Gold:', e);
+                    updateSuccess = false;
+                  }
+                }
+                
+                // Refetch alternative investments to ensure we display the latest data
+                const refreshed = await fetchAlternativeInvestments();
+                setAlternativeInvestments(refreshed);
+                
                 setEditingAllocation(false);
-                alert('Allocation updated');
+                if (updateSuccess) {
+                  alert('Allocation updated successfully');
+                } else {
+                  alert('Error updating allocation');
+                }
               }
             }}
             className={`w-full px-6 py-4 rounded-lg font-bold text-white transition text-lg ${

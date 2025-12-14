@@ -609,15 +609,19 @@ app.post('/api/alternative-investments', (req, res) => {
 
 app.put('/api/alternative-investments/:id', (req, res) => {
   try {
-    const { name, asset_type, platform, quantity, unit_price, current_value, cost, notes } = req.body;
+    const { name, asset_type, platform, quantity, unit_price, current_value, cost, allocation, notes } = req.body;
+    console.log(`Updating alternative investment ${req.params.id}:`, { name, allocation });
     const stmt = db.prepare(`
       UPDATE alternative_investments 
-      SET name = ?, asset_type = ?, platform = ?, quantity = ?, unit_price = ?, current_value = ?, cost = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, asset_type = ?, platform = ?, quantity = ?, unit_price = ?, current_value = ?, cost = ?, allocation = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, notes || null, req.params.id);
-    res.json({ id: req.params.id, name, asset_type, platform, quantity, unit_price, current_value, cost, notes });
+    stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, allocation || 0, notes || null, req.params.id);
+    const updated = { id: req.params.id, name, asset_type, platform, quantity, unit_price, current_value, cost, allocation, notes };
+    console.log(`Successfully updated: `, updated);
+    res.json(updated);
   } catch (error) {
+    console.error('Error updating alternative investment:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1114,6 +1118,163 @@ app.put('/api/allocation-settings', (req, res) => {
     const settings = updateAllocationSettings(equities, fixed_income, alternatives, cash);
     res.json(settings);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Monthly Investments Routes =====
+// GET all monthly investments
+app.get('/api/monthly-investments', (req, res) => {
+  try {
+    const monthlyInvestments = db.prepare(`
+      SELECT 
+        id,
+        month,
+        amount_added,
+        total_invested,
+        value,
+        ROUND(value - total_invested, 2) as profit,
+        CASE 
+          WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+          ELSE 0
+        END as return_percentage,
+        created_at,
+        updated_at
+      FROM monthly_investments
+      ORDER BY 
+        CASE month
+          WHEN 'Jan' THEN 1
+          WHEN 'Feb' THEN 2
+          WHEN 'Mar' THEN 3
+          WHEN 'Apr' THEN 4
+          WHEN 'May' THEN 5
+          WHEN 'Jun' THEN 6
+          WHEN 'Jul' THEN 7
+          WHEN 'Aug' THEN 8
+          WHEN 'Sep' THEN 9
+          WHEN 'Oct' THEN 10
+          WHEN 'Nov' THEN 11
+          WHEN 'Dec' THEN 12
+        END
+    `).all();
+    res.json(monthlyInvestments);
+  } catch (error) {
+    console.error('Error fetching monthly investments:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST new monthly investment
+app.post('/api/monthly-investments', (req, res) => {
+  try {
+    const { month, amount_added, total_invested, value } = req.body;
+    
+    if (!month || amount_added === undefined || total_invested === undefined || value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const stmt = db.prepare(`
+      INSERT INTO monthly_investments (month, amount_added, total_invested, value)
+      VALUES (?, ?, ?, ?)
+    `);
+    
+    try {
+      const result = stmt.run(month, amount_added, total_invested, value);
+      
+      const newRecord = db.prepare(`
+        SELECT 
+          id,
+          month,
+          amount_added,
+          total_invested,
+          value,
+          ROUND(value - total_invested, 2) as profit,
+          CASE 
+            WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+            ELSE 0
+          END as return_percentage,
+          created_at,
+          updated_at
+        FROM monthly_investments
+        WHERE id = ?
+      `).get(result.lastInsertRowid);
+      
+      console.log('Created monthly investment:', newRecord);
+      res.json(newRecord);
+    } catch (dbError) {
+      if (dbError.message.includes('UNIQUE constraint failed')) {
+        console.error('Duplicate month entry:', month);
+        return res.status(400).json({ error: `Monthly investment record for "${month}" already exists. Please edit the existing record instead.` });
+      }
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Error creating monthly investment:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT update monthly investment
+app.put('/api/monthly-investments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month, amount_added, total_invested, value } = req.body;
+    
+    if (!month || amount_added === undefined || total_invested === undefined || value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const stmt = db.prepare(`
+      UPDATE monthly_investments
+      SET month = ?, amount_added = ?, total_invested = ?, value = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    try {
+      stmt.run(month, amount_added, total_invested, value, id);
+      
+      const updatedRecord = db.prepare(`
+        SELECT 
+          id,
+          month,
+          amount_added,
+          total_invested,
+          value,
+          ROUND(value - total_invested, 2) as profit,
+          CASE 
+            WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+            ELSE 0
+          END as return_percentage,
+          created_at,
+          updated_at
+        FROM monthly_investments
+        WHERE id = ?
+      `).get(id);
+      
+      console.log('Updated monthly investment:', updatedRecord);
+      res.json(updatedRecord);
+    } catch (dbError) {
+      if (dbError.message.includes('UNIQUE constraint failed')) {
+        console.error('Duplicate month entry during update:', month);
+        return res.status(400).json({ error: `Monthly investment record for "${month}" already exists (possibly for another month).` });
+      }
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Error updating monthly investment:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE monthly investment
+app.delete('/api/monthly-investments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    db.prepare('DELETE FROM monthly_investments WHERE id = ?').run(id);
+    res.json({ message: 'Monthly investment deleted successfully', id });
+  } catch (error) {
+    console.error('Error deleting monthly investment:', error);
     res.status(500).json({ error: error.message });
   }
 });
