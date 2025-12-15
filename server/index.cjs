@@ -1279,6 +1279,239 @@ app.delete('/api/monthly-investments/:id', (req, res) => {
   }
 });
 
+// ===== Company Monthly Investments Routes =====
+// GET all company monthly investments
+app.get('/api/company-monthly-investments', (req, res) => {
+  try {
+    const companyMonthlyInvestments = db.prepare(`
+      SELECT 
+        id,
+        company_name,
+        month,
+        amount_added,
+        total_invested,
+        value,
+        ROUND(value - total_invested, 2) as profit,
+        CASE 
+          WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+          ELSE 0
+        END as return_percentage,
+        created_at,
+        updated_at
+      FROM company_monthly_investments
+      ORDER BY company_name, 
+        CASE month
+          WHEN 'Jan' THEN 1
+          WHEN 'Feb' THEN 2
+          WHEN 'Mar' THEN 3
+          WHEN 'Apr' THEN 4
+          WHEN 'May' THEN 5
+          WHEN 'Jun' THEN 6
+          WHEN 'Jul' THEN 7
+          WHEN 'Aug' THEN 8
+          WHEN 'Sep' THEN 9
+          WHEN 'Oct' THEN 10
+          WHEN 'Nov' THEN 11
+          WHEN 'Dec' THEN 12
+        END
+    `).all();
+    res.json(companyMonthlyInvestments);
+  } catch (error) {
+    console.error('Error fetching company monthly investments:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET company monthly investments by company name
+app.get('/api/company-monthly-investments/:companyName', (req, res) => {
+  try {
+    const { companyName } = req.params;
+    const investments = db.prepare(`
+      SELECT 
+        id,
+        company_name,
+        month,
+        amount_added,
+        total_invested,
+        value,
+        ROUND(value - total_invested, 2) as profit,
+        CASE 
+          WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+          ELSE 0
+        END as return_percentage,
+        created_at,
+        updated_at
+      FROM company_monthly_investments
+      WHERE company_name = ?
+      ORDER BY 
+        CASE month
+          WHEN 'Jan' THEN 1
+          WHEN 'Feb' THEN 2
+          WHEN 'Mar' THEN 3
+          WHEN 'Apr' THEN 4
+          WHEN 'May' THEN 5
+          WHEN 'Jun' THEN 6
+          WHEN 'Jul' THEN 7
+          WHEN 'Aug' THEN 8
+          WHEN 'Sep' THEN 9
+          WHEN 'Oct' THEN 10
+          WHEN 'Nov' THEN 11
+          WHEN 'Dec' THEN 12
+        END
+    `).all(decodeURIComponent(companyName));
+    res.json(investments);
+  } catch (error) {
+    console.error('Error fetching company monthly investments:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET company monthly investment for specific month
+app.get('/api/company-monthly-investments/:companyName/:month', (req, res) => {
+  try {
+    const { companyName, month } = req.params;
+    const investment = db.prepare(`
+      SELECT 
+        id,
+        company_name,
+        month,
+        amount_added,
+        total_invested,
+        value,
+        ROUND(value - total_invested, 2) as profit,
+        CASE 
+          WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+          ELSE 0
+        END as return_percentage,
+        created_at,
+        updated_at
+      FROM company_monthly_investments
+      WHERE company_name = ? AND month = ?
+    `).get(decodeURIComponent(companyName), month);
+    res.json(investment || {});
+  } catch (error) {
+    console.error('Error fetching company monthly investment:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST new company monthly investment
+app.post('/api/company-monthly-investments', (req, res) => {
+  try {
+    const { company_name, month, amount_added, total_invested, value } = req.body;
+    
+    if (!company_name || !month || amount_added === undefined || total_invested === undefined || value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: company_name, month, amount_added, total_invested, value' });
+    }
+    
+    const stmt = db.prepare(`
+      INSERT INTO company_monthly_investments (company_name, month, amount_added, total_invested, value)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    try {
+      const result = stmt.run(company_name, month, amount_added, total_invested, value);
+      
+      const newRecord = db.prepare(`
+        SELECT 
+          id,
+          company_name,
+          month,
+          amount_added,
+          total_invested,
+          value,
+          ROUND(value - total_invested, 2) as profit,
+          CASE 
+            WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+            ELSE 0
+          END as return_percentage,
+          created_at,
+          updated_at
+        FROM company_monthly_investments
+        WHERE id = ?
+      `).get(result.lastInsertRowid);
+      
+      console.log('Created company monthly investment:', newRecord);
+      res.json(newRecord);
+    } catch (dbError) {
+      if (dbError.message.includes('UNIQUE constraint failed')) {
+        console.error('Duplicate company-month entry:', company_name, month);
+        return res.status(400).json({ error: `Monthly investment record for "${company_name}" in "${month}" already exists. Please edit the existing record instead.` });
+      }
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Error creating company monthly investment:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT update company monthly investment
+app.put('/api/company-monthly-investments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company_name, month, amount_added, total_invested, value } = req.body;
+    
+    if (!company_name || !month || amount_added === undefined || total_invested === undefined || value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const stmt = db.prepare(`
+      UPDATE company_monthly_investments
+      SET company_name = ?, month = ?, amount_added = ?, total_invested = ?, value = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    try {
+      stmt.run(company_name, month, amount_added, total_invested, value, id);
+      
+      const updatedRecord = db.prepare(`
+        SELECT 
+          id,
+          company_name,
+          month,
+          amount_added,
+          total_invested,
+          value,
+          ROUND(value - total_invested, 2) as profit,
+          CASE 
+            WHEN total_invested > 0 THEN ROUND((value - total_invested) / total_invested * 100, 2)
+            ELSE 0
+          END as return_percentage,
+          created_at,
+          updated_at
+        FROM company_monthly_investments
+        WHERE id = ?
+      `).get(id);
+      
+      console.log('Updated company monthly investment:', updatedRecord);
+      res.json(updatedRecord);
+    } catch (dbError) {
+      if (dbError.message.includes('UNIQUE constraint failed')) {
+        console.error('Duplicate company-month entry during update:', company_name, month);
+        return res.status(400).json({ error: `Monthly investment record for "${company_name}" in "${month}" already exists.` });
+      }
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Error updating company monthly investment:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE company monthly investment
+app.delete('/api/company-monthly-investments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    db.prepare('DELETE FROM company_monthly_investments WHERE id = ?').run(id);
+    res.json({ message: 'Company monthly investment deleted successfully', id });
+  } catch (error) {
+    console.error('Error deleting company monthly investment:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server running' });

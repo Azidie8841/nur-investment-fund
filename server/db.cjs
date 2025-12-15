@@ -421,7 +421,7 @@ const initializeDb = () => {
     )
   `);
 
-  // Monthly Investment Tracking table
+  // Monthly Investment Tracking table (Portfolio Summary)
   db.exec(`
     CREATE TABLE IF NOT EXISTS monthly_investments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -433,6 +433,24 @@ const initializeDb = () => {
       return_percentage REAL GENERATED ALWAYS AS (CASE WHEN total_invested > 0 THEN (profit / total_invested * 100) ELSE 0 END) STORED,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Company-Level Monthly Investment Tracking table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS company_monthly_investments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_name TEXT NOT NULL,
+      month TEXT NOT NULL,
+      amount_added REAL DEFAULT 0,
+      total_invested REAL DEFAULT 0,
+      value REAL DEFAULT 0,
+      profit REAL GENERATED ALWAYS AS (value - total_invested) STORED,
+      return_percentage REAL GENERATED ALWAYS AS (CASE WHEN total_invested > 0 THEN (profit / total_invested * 100) ELSE 0 END) STORED,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(company_name) REFERENCES equities_companies(name),
+      UNIQUE(company_name, month)
     )
   `);
 
@@ -549,6 +567,32 @@ const initializeDb = () => {
     insertMonthlyInvestment.run('Oct', 300, 3000, 3570);
     insertMonthlyInvestment.run('Nov', 300, 3300, 4020);
     insertMonthlyInvestment.run('Dec', 300, 3600, 4500);
+  }
+
+  // Company Monthly Investments data (per-company tracking)
+  const companyMonthlyCount = db.prepare('SELECT COUNT(*) as count FROM company_monthly_investments').get().count;
+  
+  if (companyMonthlyCount === 0) {
+    const insertCompanyMonthly = db.prepare(`
+      INSERT INTO company_monthly_investments (company_name, month, amount_added, total_invested, value)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    // December 2025 allocation (proportional to company values)
+    // Total: 3600 (Dec total_invested)
+    // Equity ETF: 250000/640000 = 39% → ~1405.2
+    // Apple: 150000/640000 = 23.4% → ~842.4
+    // NVIDIA: 120000/640000 = 18.75% → ~675
+    // SPUS ETF: 120000/640000 = 18.75% → ~675
+    
+    // Equity ETF - Dec
+    insertCompanyMonthly.run('Equity ETF', 'Dec', 100, 1405, 1650);
+    // Apple - Dec
+    insertCompanyMonthly.run('Apple', 'Dec', 75, 842, 965);
+    // NVIDIA - Dec
+    insertCompanyMonthly.run('NVIDIA', 'Dec', 60, 675, 812);
+    // SPUS ETF - Dec
+    insertCompanyMonthly.run('SPUS ETF', 'Dec', 65, 678, 815);
   }
   
   // Create strategic plans table safely

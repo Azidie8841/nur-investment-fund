@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds, fetchMonthlyInvestments, addMonthlyInvestment, updateMonthlyInvestment, deleteMonthlyInvestment } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds, fetchMonthlyInvestments, addMonthlyInvestment, updateMonthlyInvestment, deleteMonthlyInvestment, fetchCompanyMonthlyInvestments } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -39,6 +39,7 @@ const NurInvestmentFund = () => {
   const [alternativeInvestmentMonthlyData, setAlternativeInvestmentMonthlyData] = useState({});
   const [selectedAlternativeInvestment, setSelectedAlternativeInvestment] = useState(null);
   const [monthlyInvestments, setMonthlyInvestments] = useState([]);
+  const [companyMonthlyInvestments, setCompanyMonthlyInvestments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [funds, setFunds] = useState([]);
@@ -123,6 +124,15 @@ const NurInvestmentFund = () => {
         } catch (err) {
           console.warn('Could not load alternative investment monthly data:', err);
         }
+
+        // Fetch company monthly investments
+        let companyMonthlyInvData = [];
+        try {
+          companyMonthlyInvData = await fetchCompanyMonthlyInvestments();
+        } catch (err) {
+          console.warn('Could not load company monthly investments:', err);
+          companyMonthlyInvData = [];
+        }
         
         setEquitiesCompanies(companies);
         setFixedIncomeBonds(bonds);
@@ -137,6 +147,7 @@ const NurInvestmentFund = () => {
         setAlternativeInvestments(altInvestments);
         setAlternativeInvestmentMonthlyData(altMonthlyData);
         setMonthlyInvestments(monthlyInvData);
+        setCompanyMonthlyInvestments(companyMonthlyInvData);
         setError(null);
       } catch (err) {
         console.error('Error loading data from API:', err);
@@ -1703,21 +1714,25 @@ const NurInvestmentFund = () => {
                     }
                   }
                   
-                  // Get latest month's total invested from monthlyInvestments table
-                  let latestMonthTotalInvested = 0;
-                  if (monthlyInvestments.length > 0) {
-                    // Get the last entry (latest month)
-                    const latestMonthData = monthlyInvestments[monthlyInvestments.length - 1];
-                    latestMonthTotalInvested = latestMonthData?.total_invested || 0;
+                  // Get company-specific monthly investment data (latest month)
+                  let companyMonthlyData = null;
+                  if (companyMonthlyInvestments.length > 0) {
+                    // Find the latest month data for this company
+                    const companyData = companyMonthlyInvestments.filter(inv => inv.company_name === company.name);
+                    if (companyData.length > 0) {
+                      companyMonthlyData = companyData[companyData.length - 1];
+                    }
                   }
                   
                   const recentValue = latestValue;
                   const displayValue = recentValue > 0 ? recentValue * 3.7 : company.value * 3.7;
-                  const totalInvestedDisplay = latestMonthTotalInvested;
                   
-                  // Calculate profit and return based on latest month's total invested
-                  const profit = latestMonthTotalInvested > 0 ? displayValue - latestMonthTotalInvested : 0;
-                  const returnPercent = latestMonthTotalInvested > 0 ? ((profit / latestMonthTotalInvested) * 100) : 0;
+                  // Use company-specific total invested if available, otherwise fallback
+                  const totalInvestedDisplay = companyMonthlyData?.total_invested || 0;
+                  
+                  // Calculate profit and return based on company-specific data
+                  const profit = companyMonthlyData ? (companyMonthlyData.profit || 0) : (totalInvestedDisplay > 0 ? displayValue - totalInvestedDisplay : 0);
+                  const returnPercent = companyMonthlyData ? (companyMonthlyData.return_percentage || 0) : (totalInvestedDisplay > 0 ? ((profit / totalInvestedDisplay) * 100) : 0);
                   
                   return (
                     <tr key={idx} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedAsset(company.name)}>

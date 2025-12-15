@@ -837,3 +837,87 @@ export const deleteMonthlyInvestment = async (id) => {
     throw error;
   }
 };
+
+// Company Monthly Investments
+export const fetchCompanyMonthlyInvestments = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments`);
+    const data = await handleResponse(res);
+    console.log('Fetched company monthly investments:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching company monthly investments:', error);
+    throw error;
+  }
+};
+
+export const fetchCompanyMonthlyInvestmentsByCompany = async (companyName) => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments/${encodeURIComponent(companyName)}`);
+    const data = await handleResponse(res);
+    console.log(`Fetched monthly investments for ${companyName}:`, data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching company monthly investments:', error);
+    throw error;
+  }
+};
+
+export const fetchCompanyMonthlyInvestmentByMonth = async (companyName, month) => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments/${encodeURIComponent(companyName)}/${month}`);
+    const data = await handleResponse(res);
+    console.log(`Fetched ${month} investment for ${companyName}:`, data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching company monthly investment:', error);
+    throw error;
+  }
+};
+
+export const addCompanyMonthlyInvestment = async (investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Added company monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error adding company monthly investment:', error);
+    throw error;
+  }
+};
+
+export const updateCompanyMonthlyInvestment = async (id, investment) => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investment)
+    });
+    const data = await handleResponse(res);
+    console.log('Updated company monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating company monthly investment:', error);
+    throw error;
+  }
+};
+
+export const deleteCompanyMonthlyInvestment = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/company-monthly-investments/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await handleResponse(res);
+    console.log('Deleted company monthly investment:', data);
+    return data;
+  } catch (error) {
+    console.error('Error deleting company monthly investment:', error);
+    throw error;
+  }
+};
