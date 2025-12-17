@@ -595,13 +595,13 @@ app.get('/api/alternative-investments', (req, res) => {
 
 app.post('/api/alternative-investments', (req, res) => {
   try {
-    const { name, asset_type, platform, quantity, unit_price, current_value, cost, notes } = req.body;
+    const { name, asset_type, quantity, current_value, notes } = req.body;
     const stmt = db.prepare(`
-      INSERT INTO alternative_investments (name, asset_type, platform, quantity, unit_price, current_value, cost, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO alternative_investments (name, asset_type, quantity, current_value, notes)
+      VALUES (?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, notes || null);
-    res.json({ id: result.lastInsertRowid, name, asset_type, platform, quantity, unit_price, current_value, cost, notes });
+    const result = stmt.run(name, asset_type, quantity || null, current_value, notes || null);
+    res.json({ id: result.lastInsertRowid, name, asset_type, quantity, current_value, notes });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

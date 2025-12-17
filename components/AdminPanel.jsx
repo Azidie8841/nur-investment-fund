@@ -688,7 +688,6 @@ export default function AdminPanel({
         asset_type: altType,
         current_value: value,
         quantity: altQuantity ? parseFloat(altQuantity) : null,
-        unit: altUnit || null,
         notes: altNotes || null
       });
       setAlternativeInvestments((prev) => [newInvestment, ...prev]);
