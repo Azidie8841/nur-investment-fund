@@ -609,15 +609,15 @@ app.post('/api/alternative-investments', (req, res) => {
 
 app.put('/api/alternative-investments/:id', (req, res) => {
   try {
-    const { name, asset_type, platform, quantity, unit_price, current_value, cost, allocation, notes } = req.body;
+    const { name, asset_type, platform, allocation } = req.body;
     console.log(`Updating alternative investment ${req.params.id}:`, { name, allocation });
     const stmt = db.prepare(`
       UPDATE alternative_investments 
-      SET name = ?, asset_type = ?, platform = ?, quantity = ?, unit_price = ?, current_value = ?, cost = ?, allocation = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, asset_type = ?, platform = ?, allocation = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    stmt.run(name, asset_type, platform || null, quantity || null, unit_price || null, current_value, cost || null, allocation || 0, notes || null, req.params.id);
-    const updated = { id: req.params.id, name, asset_type, platform, quantity, unit_price, current_value, cost, allocation, notes };
+    stmt.run(name, asset_type, platform || null, allocation || 0, req.params.id);
+    const updated = { id: req.params.id, name, asset_type, platform, allocation };
     console.log(`Successfully updated: `, updated);
     res.json(updated);
   } catch (error) {

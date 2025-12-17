@@ -383,12 +383,7 @@ const initializeDb = () => {
       name TEXT UNIQUE NOT NULL,
       asset_type TEXT NOT NULL,
       platform TEXT,
-      quantity REAL,
-      unit_price REAL,
-      current_value REAL NOT NULL,
-      cost REAL,
       allocation REAL DEFAULT 0,
-      notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -615,6 +610,45 @@ const migrateAlternativeInvestments = () => {
         
         console.log('✓ Allocation column added successfully');
       }, 'Add allocation column to alternative_investments');
+    }
+
+    // Remove unused columns (current_value, quantity, unit_price, cost, notes) and keep only name, asset_type, platform, allocation
+    const columnsToCheck = db.prepare(`PRAGMA table_info(alternative_investments)`).all();
+    const hasCurrentValue = columnsToCheck.some(col => col.name === 'current_value');
+    
+    if (hasCurrentValue) {
+      console.log('Cleaning up alternative_investments table schema - removing unused columns');
+      
+      executeTransaction(() => {
+        // Create backup
+        backupDatabase();
+        
+        // Create new table with simplified schema
+        db.exec(`
+          CREATE TABLE alternative_investments_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            asset_type TEXT NOT NULL,
+            platform TEXT,
+            allocation REAL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        // Copy existing data with simplified columns
+        db.exec(`
+          INSERT INTO alternative_investments_new (id, name, asset_type, platform, allocation, created_at, updated_at)
+          SELECT id, name, asset_type, platform, allocation, created_at, updated_at
+          FROM alternative_investments
+        `);
+        
+        // Drop old table and rename new one
+        db.exec(`DROP TABLE alternative_investments`);
+        db.exec(`ALTER TABLE alternative_investments_new RENAME TO alternative_investments`);
+        
+        console.log('✓ Alternative investments table schema simplified successfully');
+      }, 'Clean up alternative_investments table schema');
     }
   } catch (error) {
     console.error(`Migration error: ${error.message}`);

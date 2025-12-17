@@ -2178,9 +2178,8 @@ export default function AdminPanel({
               <tr>
                 <th className="text-left py-2 px-3">Asset Name</th>
                 <th className="text-left py-2 px-3">Type</th>
-                <th className="text-left py-2 px-3">Quantity</th>
-                <th className="text-right py-2 px-3">Value (RM)</th>
-                <th className="text-left py-2 px-3">Notes</th>
+                <th className="text-left py-2 px-3">Platform</th>
+                <th className="text-left py-2 px-3">Allocation %</th>
                 <th className="text-center py-2 px-3">Action</th>
               </tr>
             </thead>
@@ -2194,11 +2193,8 @@ export default function AdminPanel({
                         {inv.asset_type}
                       </span>
                     </td>
-                    <td className="py-2 px-3">{inv.quantity ? `${inv.quantity}` : '-'}</td>
-                    <td className="py-2 px-3 text-right font-medium">
-                      {inv.current_value.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </td>
-                    <td className="py-2 px-3 text-gray-600 text-xs">{inv.notes || '-'}</td>
+                    <td className="py-2 px-3">{inv.platform || '-'}</td>
+                    <td className="py-2 px-3">{inv.allocation ? `${inv.allocation}%` : '0%'}</td>
                     <td className="py-2 px-3 text-center">
                       <button 
                         onClick={() => handleDeleteAlternativeInvestment(inv.id)}
@@ -2211,7 +2207,7 @@ export default function AdminPanel({
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="py-4 px-3 text-center text-gray-500">No alternative investments</td>
+                  <td colSpan="5" className="py-4 px-3 text-center text-gray-500">No alternative investments</td>
                 </tr>
               )}
             </tbody>
