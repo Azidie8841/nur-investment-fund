@@ -121,10 +121,7 @@ export default function AdminPanel({
   // Alternative Investment form state
   const [altName, setAltName] = useState('');
   const [altType, setAltType] = useState('crypto');
-  const [altValue, setAltValue] = useState('');
-  const [altQuantity, setAltQuantity] = useState('');
-  const [altUnit, setAltUnit] = useState('');
-  const [altNotes, setAltNotes] = useState('');
+  const [altPlatform, setAltPlatform] = useState('');
 
   // Load funds from database on component mount
   useEffect(() => {
@@ -677,25 +674,20 @@ export default function AdminPanel({
   // Alternative Investment handlers
   const handleAddAlternativeInvestment = async (e) => {
     e.preventDefault();
-    const value = parseFloat(altValue);
-    if (!altName || !value || value <= 0) {
-      alert('Please fill in all required fields with valid values');
+    if (!altName || !altType || !altPlatform) {
+      alert('Please fill in all required fields');
       return;
     }
     try {
       const newInvestment = await addAlternativeInvestment({
         name: altName,
         asset_type: altType,
-        current_value: value,
-        quantity: altQuantity ? parseFloat(altQuantity) : null,
-        notes: altNotes || null
+        platform: altPlatform
       });
       setAlternativeInvestments((prev) => [newInvestment, ...prev]);
       setAltName('');
-      setAltValue('');
-      setAltQuantity('');
-      setAltUnit('');
-      setAltNotes('');
+      setAltType('crypto');
+      setAltPlatform('');
       alert('Alternative investment added successfully');
     } catch (error) {
       alert('Error adding investment: ' + error.message);
@@ -2144,7 +2136,7 @@ export default function AdminPanel({
       {/* Alternative Investments Section */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="font-semibold mb-4">Add Alternative Investment</h3>
-        <div className="space-y-2 grid grid-cols-4 gap-2">
+        <div className="space-y-2 grid grid-cols-3 gap-2">
           <input 
             type="text" 
             placeholder="Asset Name (e.g., Bitcoin, Gold)" 
@@ -2165,38 +2157,15 @@ export default function AdminPanel({
             <option value="other">Other</option>
           </select>
           <input 
-            type="number" 
-            step="0.01"
-            placeholder="Current Value (RM)" 
-            value={altValue}
-            onChange={(e) => setAltValue(e.target.value)}
-            className="w-full px-3 py-2 border rounded col-span-1" 
-          />
-          <input 
             type="text" 
-            placeholder="Unit (e.g., coins, oz)" 
-            value={altUnit}
-            onChange={(e) => setAltUnit(e.target.value)}
+            placeholder="Platform (e.g., Binance, Vault)" 
+            value={altPlatform}
+            onChange={(e) => setAltPlatform(e.target.value)}
             className="w-full px-3 py-2 border rounded col-span-1" 
-          />
-          <input 
-            type="number" 
-            step="0.01"
-            placeholder="Quantity" 
-            value={altQuantity}
-            onChange={(e) => setAltQuantity(e.target.value)}
-            className="w-full px-3 py-2 border rounded col-span-1" 
-          />
-          <input 
-            type="text" 
-            placeholder="Notes" 
-            value={altNotes}
-            onChange={(e) => setAltNotes(e.target.value)}
-            className="w-full px-3 py-2 border rounded col-span-3" 
           />
           <button 
             onClick={handleAddAlternativeInvestment}
-            className="px-4 py-2 bg-blue-600 text-white rounded col-span-4"
+            className="px-4 py-2 bg-blue-600 text-white rounded col-span-3"
           >
             Add Investment
           </button>
