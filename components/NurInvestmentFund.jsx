@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import AdminPanel from './AdminPanel';
 import UserProfilePanel from './UserProfilePanel';
 import LoginPage from './LoginPage';
-import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds, fetchMonthlyInvestments, addMonthlyInvestment, updateMonthlyInvestment, deleteMonthlyInvestment, fetchAlternativeAllocationSettings } from '../utils/api';
+import { fetchEquitiesCompanies, fetchAssetMonthlyData, fetchPerformanceData, fetchUserProfiles, updateEquitiesCompany, fetchSavingsRecords, fetchSavingsGoals, fetchFixedIncomeBonds, fetchFixedIncomeMonthlyData, fetchBondMonthlyDividends, fetchBondMonthlyValues, fetchAlternativeInvestments, fetchAlternativeInvestmentMonthlyData, addAlternativeInvestment, updateAlternativeInvestment, deleteAlternativeInvestment, updateAlternativeInvestmentMonthlyData, updateSavingsRecord, deleteSavingsRecord, fetchAllocationSettings, fetchFunds, fetchMonthlyInvestments, addMonthlyInvestment, updateMonthlyInvestment, deleteMonthlyInvestment, fetchAlternativeAllocationSettings, fetchAlternativeInvestmentMonthlyInvestments, createAlternativeInvestmentMonthlyInvestment, updateAlternativeInvestmentMonthlyInvestment, deleteAlternativeInvestmentMonthlyInvestment } from '../utils/api';
 
 const NurInvestmentFund = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -39,6 +39,16 @@ const NurInvestmentFund = () => {
   const [alternativeInvestmentMonthlyData, setAlternativeInvestmentMonthlyData] = useState({});
   const [selectedAlternativeInvestment, setSelectedAlternativeInvestment] = useState(null);
   const [monthlyInvestments, setMonthlyInvestments] = useState([]);
+  const [alternativeInvestmentMonthlyInvestments, setAlternativeInvestmentMonthlyInvestments] = useState([]);
+  const [showAddAlternativeMonthlyInvestmentModal, setShowAddAlternativeMonthlyInvestmentModal] = useState(false);
+  const [editingAlternativeMonthlyInvestment, setEditingAlternativeMonthlyInvestment] = useState(null);
+  const [alternativeMonthlyInvestmentForm, setAlternativeMonthlyInvestmentForm] = useState({
+    month: '',
+    amount_added: 0,
+    quantity: 0,
+    total_invested: 0,
+    value: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [funds, setFunds] = useState([]);
@@ -201,6 +211,21 @@ const NurInvestmentFund = () => {
     };
     loadAlternativeAllocationSettings();
   }, []);
+
+  // Load alternative investment monthly investments when viewing a detail
+  useEffect(() => {
+    const loadAlternativeInvestmentMonthlyInvestments = async () => {
+      if (selectedAlternativeInvestment?.name) {
+        try {
+          const data = await fetchAlternativeInvestmentMonthlyInvestments(selectedAlternativeInvestment.name);
+          setAlternativeInvestmentMonthlyInvestments(data || []);
+        } catch (error) {
+          console.error('Failed to load alternative investment monthly investments:', error);
+        }
+      }
+    };
+    loadAlternativeInvestmentMonthlyInvestments();
+  }, [selectedAlternativeInvestment?.name]);
 
   // Find current user object by id if logged in - use user object directly since it has hasVotingAccess flag
   const currentUser = user ? user : null;
@@ -1324,6 +1349,124 @@ const NurInvestmentFund = () => {
             </div>
           </div>
         )}
+
+        {/* Add/Edit Alternative Investment Monthly Investment Modal */}
+        {showAddAlternativeMonthlyInvestmentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h3 className="text-lg font-semibold mb-4">
+                {editingAlternativeMonthlyInvestment ? 'Edit Monthly Investment' : 'Add Monthly Investment'}
+              </h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  if (editingAlternativeMonthlyInvestment) {
+                    await updateAlternativeInvestmentMonthlyInvestment(
+                      editingAlternativeMonthlyInvestment,
+                      alternativeMonthlyInvestmentForm.amount_added,
+                      alternativeMonthlyInvestmentForm.quantity,
+                      alternativeMonthlyInvestmentForm.total_invested,
+                      alternativeMonthlyInvestmentForm.value
+                    );
+                  } else {
+                    await createAlternativeInvestmentMonthlyInvestment(
+                      investment.name,
+                      alternativeMonthlyInvestmentForm.month,
+                      alternativeMonthlyInvestmentForm.amount_added,
+                      alternativeMonthlyInvestmentForm.quantity,
+                      alternativeMonthlyInvestmentForm.total_invested,
+                      alternativeMonthlyInvestmentForm.value
+                    );
+                  }
+                  // Reload data from database
+                  const data = await fetchAlternativeInvestmentMonthlyInvestments(investment.name);
+                  setAlternativeInvestmentMonthlyInvestments(data || []);
+                  setShowAddAlternativeMonthlyInvestmentModal(false);
+                  setEditingAlternativeMonthlyInvestment(null);
+                  setAlternativeMonthlyInvestmentForm({
+                    month: '',
+                    amount_added: 0,
+                    quantity: 0,
+                    total_invested: 0,
+                    value: 0
+                  });
+                } catch (error) {
+                  alert('Failed to save: ' + error.message);
+                }
+              }}>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Month (e.g., Jan)"
+                    value={alternativeMonthlyInvestmentForm.month}
+                    onChange={(e) => setAlternativeMonthlyInvestmentForm({...alternativeMonthlyInvestmentForm, month: e.target.value})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Amount Added"
+                    value={alternativeMonthlyInvestmentForm.amount_added}
+                    onChange={(e) => setAlternativeMonthlyInvestmentForm({...alternativeMonthlyInvestmentForm, amount_added: parseFloat(e.target.value) || 0})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Quantity"
+                    value={alternativeMonthlyInvestmentForm.quantity}
+                    onChange={(e) => setAlternativeMonthlyInvestmentForm({...alternativeMonthlyInvestmentForm, quantity: parseFloat(e.target.value) || 0})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Total Invested"
+                    value={alternativeMonthlyInvestmentForm.total_invested}
+                    onChange={(e) => setAlternativeMonthlyInvestmentForm({...alternativeMonthlyInvestmentForm, total_invested: parseFloat(e.target.value) || 0})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Value"
+                    value={alternativeMonthlyInvestmentForm.value}
+                    onChange={(e) => setAlternativeMonthlyInvestmentForm({...alternativeMonthlyInvestmentForm, value: parseFloat(e.target.value) || 0})}
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 text-white rounded py-2 hover:bg-blue-700 transition"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddAlternativeMonthlyInvestmentModal(false);
+                      setEditingAlternativeMonthlyInvestment(null);
+                      setAlternativeMonthlyInvestmentForm({ month: '', amount_added: 0, quantity: 0, total_invested: 0, value: 0 });
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 rounded py-2 hover:bg-gray-400 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1457,7 +1600,17 @@ const NurInvestmentFund = () => {
             <h3 className="text-lg font-semibold">Monthly Investments (2025)</h3>
             {user?.role === 'admin' && (
               <button
-                onClick={() => setShowAddMonthlyInvestmentModal(true)}
+                onClick={() => {
+                  setAlternativeMonthlyInvestmentForm({
+                    month: '',
+                    amount_added: 0,
+                    quantity: 0,
+                    total_invested: 0,
+                    value: 0
+                  });
+                  setEditingAlternativeMonthlyInvestment(null);
+                  setShowAddAlternativeMonthlyInvestmentModal(true);
+                }}
                 className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition"
               >
                 + Add
@@ -1481,7 +1634,7 @@ const NurInvestmentFund = () => {
                 </tr>
               </thead>
               <tbody>
-                {monthlyInvestments.map((inv) => (
+                {alternativeInvestmentMonthlyInvestments.map((inv) => (
                   <tr key={inv.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-2">{inv.month}</td>
                     <td className="px-4 py-2">RM {Number(inv.amount_added).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1498,20 +1651,32 @@ const NurInvestmentFund = () => {
                       <td className="px-4 py-2 space-x-2">
                         <button
                           onClick={() => {
-                            setEditingMonthlyInvestment(inv.id);
-                            setMonthlyInvestmentForm({
+                            setEditingAlternativeMonthlyInvestment(inv.id);
+                            setAlternativeMonthlyInvestmentForm({
                               month: inv.month,
                               amount_added: inv.amount_added,
+                              quantity: inv.quantity,
                               total_invested: inv.total_invested,
                               value: inv.value
                             });
+                            setShowAddAlternativeMonthlyInvestmentModal(true);
                           }}
                           className="text-blue-600 hover:text-blue-800 text-sm"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteMonthlyInvestment(inv.id)}
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this entry?')) {
+                              try {
+                                await deleteAlternativeInvestmentMonthlyInvestment(inv.id);
+                                const data = await fetchAlternativeInvestmentMonthlyInvestments(investment.name);
+                                setAlternativeInvestmentMonthlyInvestments(data || []);
+                              } catch (error) {
+                                alert('Failed to delete entry: ' + error.message);
+                              }
+                            }
+                          }}
                           className="text-red-600 hover:text-red-800 text-sm"
                         >
                           Delete
