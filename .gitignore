@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vite
+.vite/
+
+# Database - DO NOT PUSH
+*.db
+*.sqlite
+*.sqlite3
+server/nur_fund.db
+
+# Backups - Private & Local Only
+/server/backups/
+/server/backups/**
+backups/
+
+# Deployments (local)
+/server/deployments/
+/server/deployments/**
+
+# Migrations (local)
+/server/migrations/
+/server/migrations/**
+
+# Logs
+*.log
+logs/
+api.log
+debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test
+coverage/
+
+# Misc
+.cache/

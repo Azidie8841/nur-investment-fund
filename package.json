@@ -1,0 +1,41 @@
+{
+  "name": "nur-investment-fund-test",
+  "version": "1.2.9",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "node server/index.cjs",
+    "server:dev": "node server/index.cjs",
+    "start": "concurrently \"npm run server\" \"npm run dev\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:e2e": "node tests/run-tests.cjs",
+    "test:backup": "node tests/run-tests.cjs",
+    "test:responsive": "node tests/responsive-zoom.test.cjs",
+    "backup:pre-deploy": "node server/pre-deployment-backup.cjs",
+    "deploy": "npm run backup:pre-deploy && npm run build"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
+    "lucide-react": "*",
+    "nodemailer": "^7.0.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@tailwindcss/postcss": "*",
+    "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "vite": "^5.0.0"
+  }
+}
