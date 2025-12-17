@@ -1450,6 +1450,80 @@ const NurInvestmentFund = () => {
             </table>
           </div>
         </div>
+
+        {/* Monthly Investments Tracking Table for Alternative Investments */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Monthly Investments (2025)</h3>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setShowAddMonthlyInvestmentModal(true)}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition"
+              >
+                + Add
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Month</th>
+                  <th className="px-4 py-2 text-left font-semibold">Add</th>
+                  <th className="px-4 py-2 text-left font-semibold">Quantity</th>
+                  <th className="px-4 py-2 text-left font-semibold">Total Invested</th>
+                  <th className="px-4 py-2 text-left font-semibold">Value</th>
+                  <th className="px-4 py-2 text-left font-semibold">Profit</th>
+                  <th className="px-4 py-2 text-left font-semibold">Return</th>
+                  {user?.role === 'admin' && (
+                    <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyInvestments.map((inv) => (
+                  <tr key={inv.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-2">{inv.month}</td>
+                    <td className="px-4 py-2">RM {Number(inv.amount_added).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2">{inv.quantity || 0}</td>
+                    <td className="px-4 py-2">RM {Number(inv.total_invested).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2 font-semibold">RM {Number(inv.value).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2" style={{ color: Number(inv.profit) >= 0 ? '#10b981' : '#ef4444' }}>
+                      {Number(inv.profit) >= 0 ? '+' : ''}RM {Number(inv.profit).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2" style={{ color: Number(inv.return_percentage) >= 0 ? '#10b981' : '#ef4444' }}>
+                      {Number(inv.return_percentage) >= 0 ? '+' : ''}{Number(inv.return_percentage).toFixed(2)}%
+                    </td>
+                    {user?.role === 'admin' && (
+                      <td className="px-4 py-2 space-x-2">
+                        <button
+                          onClick={() => {
+                            setEditingMonthlyInvestment(inv.id);
+                            setMonthlyInvestmentForm({
+                              month: inv.month,
+                              amount_added: inv.amount_added,
+                              total_invested: inv.total_invested,
+                              value: inv.value
+                            });
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMonthlyInvestment(inv.id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
