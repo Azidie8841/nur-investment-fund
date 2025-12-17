@@ -426,6 +426,25 @@ const initializeDb = () => {
     )
   `);
 
+  // Alternative Investment Monthly Investments table - CRUD for Monthly Investments (2025)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alternative_investment_monthly_investments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      investment_name TEXT NOT NULL,
+      month TEXT NOT NULL,
+      amount_added REAL DEFAULT 0,
+      quantity REAL DEFAULT 0,
+      total_invested REAL DEFAULT 0,
+      value REAL DEFAULT 0,
+      profit REAL GENERATED ALWAYS AS (value - total_invested) STORED,
+      return_percentage REAL GENERATED ALWAYS AS (CASE WHEN total_invested > 0 THEN (profit / total_invested * 100) ELSE 0 END) STORED,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(investment_name) REFERENCES alternative_investments(name),
+      UNIQUE(investment_name, month)
+    )
+  `);
+
   // Monthly Investment Tracking table
   db.exec(`
     CREATE TABLE IF NOT EXISTS monthly_investments (
@@ -859,6 +878,104 @@ const updateAlternativeAllocationSettings = (bitcoinAllocation, goldAllocation) 
   }
 };
 
+// ==================== ALTERNATIVE INVESTMENT MONTHLY INVESTMENTS CRUD ====================
+
+/**
+ * Get all monthly investments for a specific alternative investment
+ */
+const getAlternativeInvestmentMonthlyInvestments = (investmentName) => {
+  try {
+    const stmt = db.prepare(`
+      SELECT id, investment_name, month, amount_added, quantity, total_invested, value, profit, return_percentage, created_at, updated_at
+      FROM alternative_investment_monthly_investments
+      WHERE investment_name = ?
+      ORDER BY 
+        CASE month
+          WHEN 'January' THEN 1 WHEN 'Feb' THEN 2 WHEN 'March' THEN 3 WHEN 'April' THEN 4
+          WHEN 'May' THEN 5 WHEN 'June' THEN 6 WHEN 'July' THEN 7 WHEN 'August' THEN 8
+          WHEN 'September' THEN 9 WHEN 'Oct' THEN 10 WHEN 'November' THEN 11 WHEN 'December' THEN 12
+          WHEN 'Jan' THEN 1 WHEN 'Feb' THEN 2 WHEN 'Mar' THEN 3 WHEN 'Apr' THEN 4
+          WHEN 'May' THEN 5 WHEN 'Jun' THEN 6 WHEN 'Jul' THEN 7 WHEN 'Aug' THEN 8
+          WHEN 'Sep' THEN 9 WHEN 'Oct' THEN 10 WHEN 'Nov' THEN 11 WHEN 'Dec' THEN 12
+        END ASC
+    `);
+    return stmt.all(investmentName);
+  } catch (error) {
+    console.error('Error fetching alternative investment monthly investments:', error.message);
+    return [];
+  }
+};
+
+/**
+ * Create a new monthly investment entry for alternative investment
+ */
+const createAlternativeInvestmentMonthlyInvestment = (investmentName, month, amountAdded, quantity, totalInvested, value) => {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO alternative_investment_monthly_investments 
+      (investment_name, month, amount_added, quantity, total_invested, value)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(investmentName, month, amountAdded || 0, quantity || 0, totalInvested || 0, value || 0);
+    console.log(`✓ Created monthly investment for ${investmentName} - ${month}`);
+    return { id: result.lastInsertRowid, investment_name: investmentName, month, amount_added: amountAdded, quantity, total_invested: totalInvested, value };
+  } catch (error) {
+    console.error('Error creating alternative investment monthly investment:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * Update a monthly investment entry for alternative investment
+ */
+const updateAlternativeInvestmentMonthlyInvestment = (id, amountAdded, quantity, totalInvested, value) => {
+  try {
+    const stmt = db.prepare(`
+      UPDATE alternative_investment_monthly_investments
+      SET amount_added = ?, quantity = ?, total_invested = ?, value = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(amountAdded || 0, quantity || 0, totalInvested || 0, value || 0, id);
+    console.log(`✓ Updated monthly investment (ID: ${id})`);
+    
+    // Fetch and return updated record
+    const updated = db.prepare('SELECT * FROM alternative_investment_monthly_investments WHERE id = ?').get(id);
+    return updated;
+  } catch (error) {
+    console.error('Error updating alternative investment monthly investment:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * Delete a monthly investment entry for alternative investment
+ */
+const deleteAlternativeInvestmentMonthlyInvestment = (id) => {
+  try {
+    const stmt = db.prepare('DELETE FROM alternative_investment_monthly_investments WHERE id = ?');
+    stmt.run(id);
+    console.log(`✓ Deleted monthly investment (ID: ${id})`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting alternative investment monthly investment:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get a single monthly investment by ID
+ */
+const getAlternativeInvestmentMonthlyInvestmentById = (id) => {
+  try {
+    const stmt = db.prepare('SELECT * FROM alternative_investment_monthly_investments WHERE id = ?');
+    return stmt.get(id);
+  } catch (error) {
+    console.error('Error fetching monthly investment by ID:', error.message);
+    return null;
+  }
+};
+
+
 // ==================== INITIALIZATION ====================
 
 module.exports = { 
@@ -885,5 +1002,11 @@ module.exports = {
   updateAllocationSettings,
   // Alternative Allocation Settings
   getAlternativeAllocationSettings,
-  updateAlternativeAllocationSettings
+  updateAlternativeAllocationSettings,
+  // Alternative Investment Monthly Investments CRUD
+  getAlternativeInvestmentMonthlyInvestments,
+  createAlternativeInvestmentMonthlyInvestment,
+  updateAlternativeInvestmentMonthlyInvestment,
+  deleteAlternativeInvestmentMonthlyInvestment,
+  getAlternativeInvestmentMonthlyInvestmentById
 };

@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const { db, initializeDb, getAllFunds, getFundById, createFund, updateFund, deleteFund, updateFundCurrentValue, getAllocationSettings, updateAllocationSettings, getAlternativeAllocationSettings, updateAlternativeAllocationSettings } = require('./db.cjs');
+const { db, initializeDb, getAllFunds, getFundById, createFund, updateFund, deleteFund, updateFundCurrentValue, getAllocationSettings, updateAllocationSettings, getAlternativeAllocationSettings, updateAlternativeAllocationSettings, getAlternativeInvestmentMonthlyInvestments, createAlternativeInvestmentMonthlyInvestment, updateAlternativeInvestmentMonthlyInvestment, deleteAlternativeInvestmentMonthlyInvestment } = require('./db.cjs');
 const { createBackup, listBackups, restoreBackup, cleanOldBackups } = require('./backup.cjs');
 
 const app = express();
@@ -664,6 +664,73 @@ app.put('/api/alternative-investment-monthly-data/:investmentName', (req, res) =
       `).run(req.params.investmentName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec);
     }
     res.json({ investment_name: req.params.investmentName, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Alternative Investment Monthly Investments CRUD Routes =====
+// Get all monthly investments for an alternative investment
+app.get('/api/alternative-investment-monthly-investments/:investmentName', (req, res) => {
+  try {
+    const { getAlternativeInvestmentMonthlyInvestments } = require('./db.cjs');
+    const investments = getAlternativeInvestmentMonthlyInvestments(req.params.investmentName);
+    res.json(investments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new monthly investment for alternative investment
+app.post('/api/alternative-investment-monthly-investments', (req, res) => {
+  try {
+    const { createAlternativeInvestmentMonthlyInvestment } = require('./db.cjs');
+    const { investment_name, month, amount_added, quantity, total_invested, value } = req.body;
+    
+    if (!investment_name || !month) {
+      return res.status(400).json({ error: 'investment_name and month are required' });
+    }
+    
+    const result = createAlternativeInvestmentMonthlyInvestment(
+      investment_name, 
+      month, 
+      amount_added, 
+      quantity, 
+      total_invested, 
+      value
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update a monthly investment for alternative investment
+app.put('/api/alternative-investment-monthly-investments/:id', (req, res) => {
+  try {
+    const { updateAlternativeInvestmentMonthlyInvestment } = require('./db.cjs');
+    const { id } = req.params;
+    const { amount_added, quantity, total_invested, value } = req.body;
+    
+    const updated = updateAlternativeInvestmentMonthlyInvestment(
+      id, 
+      amount_added, 
+      quantity, 
+      total_invested, 
+      value
+    );
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a monthly investment for alternative investment
+app.delete('/api/alternative-investment-monthly-investments/:id', (req, res) => {
+  try {
+    const { deleteAlternativeInvestmentMonthlyInvestment } = require('./db.cjs');
+    deleteAlternativeInvestmentMonthlyInvestment(req.params.id);
+    res.json({ success: true, message: 'Monthly investment deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
