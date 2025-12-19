@@ -684,11 +684,26 @@ app.get('/api/alternative-investment-monthly-investments/:investmentName', (req,
 // Create a new monthly investment for alternative investment
 app.post('/api/alternative-investment-monthly-investments', (req, res) => {
   try {
-    const { createAlternativeInvestmentMonthlyInvestment } = require('./db.cjs');
     const { investment_name, month, amount_added, quantity, total_invested, value } = req.body;
     
     if (!investment_name || !month) {
       return res.status(400).json({ error: 'investment_name and month are required' });
+    }
+    
+    // Check if entry already exists for this investment and month
+    const existingEntries = getAlternativeInvestmentMonthlyInvestments(investment_name);
+    const existingEntry = existingEntries.find(e => e.month.toLowerCase() === month.toLowerCase());
+    
+    if (existingEntry) {
+      // Update existing entry instead of creating duplicate
+      const updated = updateAlternativeInvestmentMonthlyInvestment(
+        existingEntry.id,
+        amount_added,
+        quantity,
+        total_invested,
+        value
+      );
+      return res.json(updated);
     }
     
     const result = createAlternativeInvestmentMonthlyInvestment(
